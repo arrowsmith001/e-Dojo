@@ -1,16 +1,7 @@
 # edojo
 
-A new Flutter application.
+A multi-platform app built in Flutter for fighting game enthusiasts. It provides an online platform where users can challenge each other to games, record outcomes, and contribute towards a data pool to gain insights on the game and their individual performance.
 
-## Getting Started
+Currently uses Firebase for all its online functionality, though in theory any implementation of the 'NetworkServices' class could allow for alternative approaches.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Data model management is done through BLoC-inspired stream and sink system which interact with a centralised data center.
