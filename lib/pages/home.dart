@@ -1,8 +1,13 @@
 
+import 'dart:convert';
+
+import 'package:edojo/widgets/my_app_bar.dart';
+
 import 'package:edojo/bloc/bloc.dart';
 import 'package:edojo/bloc/auth_states.dart';
 import 'package:edojo/classes/misc.dart';
 import 'package:edojo/pages/schemes.dart';
+import 'package:edojo/tools/assets.dart';
 import 'package:edojo/tools/network.dart';
 import 'package:edojo/widgets/layout.dart';
 import 'package:flutter/cupertino.dart';
@@ -32,7 +37,7 @@ class _HomePageState extends State<HomePage> {
         builder: (context, snapshot) {
           AuthState ds = snapshot.data;
 
-          if(ds is LogOutState)
+          if(ds is LogOutState || ds is DeterminingProfileCompletionState)
           {
             return Loading();
           }
@@ -73,32 +78,32 @@ class _HomeDefaultState extends State<HomeDefault> {
               appBar: MyAppbar(
                 //leading: Icon(Icons.arrow_back, color: Colors.white,),
                 title: Text(
-                    'Welcome ${ds.data.user.displayName}',
+                    'Welcome ${ds.data.user.meta.displayName}',
                     style: TextStyle(color: Colors.white, fontSize: 20)),
-                startColor: Color.fromRGBO(3, 5, 9, 1.0),
-                endColor: Color.fromRGBO(32, 56, 100, 1.0),
+//                startColor: Color.fromRGBO(3, 5, 9, 1.0),
+//                endColor: Color.fromRGBO(32, 56, 100, 1.0),
               ),
               body: SafeArea(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-
-                      GridView.count(
-                        physics: NeverScrollableScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Center(
+                      child: GridView.count(
                         shrinkWrap: true,
-                        crossAxisCount: 2,
-                        children: <Widget>[
+                          crossAxisCount: 2,
+                          children: <Widget>[
 
-                          BigMainButton(context, Empty(), Colors.yellow).padding(EdgeInsets.all(20.0)),
-                          BigMainButton(context, Empty(), Colors.blue).padding(EdgeInsets.all(20.0)),
-                          BigMainButton(context, GoToSchemes(), Colors.pink, title: 'Scheme Editor').padding(EdgeInsets.all(20.0)),
-                          BigMainButton(context, Empty(), Colors.orange).padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context, image: Image.asset(Assets.FISTS), widget: Empty(), color: Colors.yellow, title: 'Challenges').padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context,image: Image.asset(Assets.FIGHTER), widget: Empty(), color: Colors.blue, title: 'View Fighter Profile').padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context, image: Image.asset(Assets.GAME),widget: GoToSchemes(), color: Colors.purpleAccent, title: 'Manage Schemes').padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.orange, title: 'Explore Data').padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'General settings').padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'Account settings').padding(EdgeInsets.all(20.0)),
 
-                        ])
-
-                    ],
-                  ),
+                          ]),
+                    ).EXPANDED()
+                  ],
                 ).MY_BACKGROUND_CONTAINER(),
               ),
             );
@@ -108,25 +113,48 @@ class _HomeDefaultState extends State<HomeDefault> {
 
 
 class BigMainButton extends StatelessWidget{
-  BigMainButton(this.context0, this.widget, this.color, {this.title});
+  BigMainButton(this.context0, {this.image, this.widget, this.color, this.title});
   final String title;
 
   BuildContext context0;
   Color color;
   Widget widget;
+  Image image;
+
+  void Navigate(){
+    Navigator.of(context0).push(MaterialPageRoute(builder: (BuildContext context) { return widget; }));
+  }
 
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
-    return FlatButton(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(15))),
-      onPressed: () {
 
-        Navigator.of(context0).push(MaterialPageRoute(builder: (BuildContext context) { return widget; }));
+    return InkWell(
+      onTap: (){
+        Navigate();
       },
-      child: Text(title ?? ''),
-      color: color,
-
+      child: Container(
+        child:  Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Image(color: this.color, image: image.image, height: 150, fit: BoxFit.fill,).FLEX(3),
+            Text(this.title, style: TextStyle(color: this.color, fontWeight: FontWeight.bold)).FLEX(3),
+          ],
+        ),
+        decoration: BoxDecoration(
+            border: Border.all(width: 5, color: this.color),
+            borderRadius: BorderRadius.all(Radius.circular(15)),
+            boxShadow: [
+              BoxShadow(
+                color: this.color.withAlpha(70),
+                blurRadius: 50.0,
+                spreadRadius: 10.0,
+                offset: Offset(0.0, 0.0,
+                ),
+              ),
+            ]
+        ),
+      )
     );
   }
 
@@ -238,8 +266,8 @@ class _CompleteSetupState extends State<CompleteSetup> {
                     //leading: Icon(Icons.arrow_back, color: Colors.white,),
                     title: Text(widget.title,
                         style: TextStyle(color: Colors.white, fontSize: 20)),
-                    startColor: Color.fromRGBO(3, 5, 9, 1.0),
-                    endColor: Color.fromRGBO(32, 56, 100, 1.0),
+//                    startColor: Color.fromRGBO(3, 5, 9, 1.0),
+//                    endColor: Color.fromRGBO(32, 56, 100, 1.0),
                   ),
                   body: SafeArea(
                     child: FormBuilder(

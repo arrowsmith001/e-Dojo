@@ -8,13 +8,11 @@ part of 'misc.dart';
 
 User _$UserFromJson(Map json) {
   return User()
-    ..email = json['email'] as String
-    ..uid = json['uid'] as String
-    ..joinDate = json['joinDate'] == null
+    ..meta = json['meta'] == null
         ? null
-        : DateTime.parse(json['joinDate'] as String)
-    ..userName = json['userName'] as String
-    ..displayName = json['displayName'] as String
+        : UserMetadata.fromJson((json['meta'] as Map)?.map(
+            (k, e) => MapEntry(k as String, e),
+          ))
     ..friendList = (json['friendList'] as Map)?.map(
       (k, e) => MapEntry(k as String, e as String),
     )
@@ -29,7 +27,8 @@ User _$UserFromJson(Map json) {
     )
     ..schemesInEditor = (json['schemesInEditor'] as Map)?.map(
       (k, e) => MapEntry(k as String, e as String),
-    );
+    )
+    ..imgId = json['imgId'] as String;
 }
 
 Map<String, dynamic> _$UserToJson(User instance) {
@@ -41,27 +40,84 @@ Map<String, dynamic> _$UserToJson(User instance) {
     }
   }
 
-  writeNotNull('email', instance.email);
-  writeNotNull('uid', instance.uid);
-  writeNotNull('joinDate', instance.joinDate?.toIso8601String());
-  writeNotNull('userName', instance.userName);
-  writeNotNull('displayName', instance.displayName);
+  writeNotNull('meta', instance.meta?.toJson());
   writeNotNull('friendList', instance.friendList);
   writeNotNull('friendsPendingResponse', instance.friendsPendingResponse);
   writeNotNull('friendRequests', instance.friendRequests);
   writeNotNull('challengeRequests', instance.challengeRequests);
   writeNotNull('schemesInEditor', instance.schemesInEditor);
+  writeNotNull('imgId', instance.imgId);
+  return val;
+}
+
+UserMetadata _$UserMetadataFromJson(Map json) {
+  return UserMetadata()
+    ..userName = json['userName'] as String
+    ..displayName = json['displayName'] as String
+    ..email = json['email'] as String
+    ..uid = json['uid'] as String
+    ..joinDate = json['joinDate'] == null
+        ? null
+        : DateTime.parse(json['joinDate'] as String)
+    ..imgId = json['imgId'] as String;
+}
+
+Map<String, dynamic> _$UserMetadataToJson(UserMetadata instance) {
+  final val = <String, dynamic>{};
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('userName', instance.userName);
+  writeNotNull('displayName', instance.displayName);
+  writeNotNull('email', instance.email);
+  writeNotNull('uid', instance.uid);
+  writeNotNull('joinDate', instance.joinDate?.toIso8601String());
+  writeNotNull('imgId', instance.imgId);
+  return val;
+}
+
+SchemeMetadata _$SchemeMetadataFromJson(Map json) {
+  return SchemeMetadata()
+    ..schemeID = json['schemeID'] as String
+    ..gameName = json['gameName'] as String
+    ..gameNickName = json['gameNickName'] as String
+    ..rosterNum = json['rosterNum'] as int
+    ..upvotes = json['upvotes'] as int
+    ..iconImgId = json['iconImgId'] as String
+    ..releaseYear = json['releaseYear'] as int;
+}
+
+Map<String, dynamic> _$SchemeMetadataToJson(SchemeMetadata instance) {
+  final val = <String, dynamic>{};
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('schemeID', instance.schemeID);
+  writeNotNull('gameName', instance.gameName);
+  writeNotNull('gameNickName', instance.gameNickName);
+  writeNotNull('rosterNum', instance.rosterNum);
+  writeNotNull('upvotes', instance.upvotes);
+  writeNotNull('iconImgId', instance.iconImgId);
+  writeNotNull('releaseYear', instance.releaseYear);
   return val;
 }
 
 GameScheme _$GameSchemeFromJson(Map json) {
   return GameScheme(
-    json['gameName'] as String,
-    json['gameNickName'] as String,
+    json['meta'] == null
+        ? null
+        : SchemeMetadata.fromJson((json['meta'] as Map)?.map(
+            (k, e) => MapEntry(k as String, e),
+          )),
   )
-    ..schemeID = json['schemeID'] as String
-    ..iconImgId = json['iconImgId'] as String
-    ..releaseYear = json['releaseYear'] as int
     ..roster = (json['roster'] as List)
         ?.map((e) => e == null
             ? null
@@ -85,11 +141,7 @@ Map<String, dynamic> _$GameSchemeToJson(GameScheme instance) {
     }
   }
 
-  writeNotNull('schemeID', instance.schemeID);
-  writeNotNull('gameName', instance.gameName);
-  writeNotNull('gameNickName', instance.gameNickName);
-  writeNotNull('iconImgId', instance.iconImgId);
-  writeNotNull('releaseYear', instance.releaseYear);
+  writeNotNull('meta', instance.meta?.toJson());
   writeNotNull('roster', instance.roster?.map((e) => e?.toJson())?.toList());
   writeNotNull('grid', instance.grid?.toJson());
   return val;

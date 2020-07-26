@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:edojo/widgets/my_app_bar.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/bloc/appstate_states.dart';
@@ -61,17 +62,28 @@ class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStat
         initialData: UserState(data.model),
         builder: (context, snapshot) {
           UserState ds = snapshot.data;
+          DataModel dm = ds.model;
 
           return Scaffold(
               appBar:
-              AppBar(
-                title: Text('Schemes'),
+              MyAppbar(
+                title: Text('Schemes', style: TextStyle(color: Colors.white),),
                 bottom: TabBar(
                   controller: _tabController,
                   tabs: <Widget>[
                   Tab(text: 'My Schemes',),
                   Tab(text: 'Editor')
                 ],),
+                actions: <Widget>[
+                  IconButton(
+                    icon: Icon(Icons.shopping_cart),
+                    onPressed: () {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PublishedSchemeBrowser()))
+                          .then((value) {
+                        data.appStateEventSink.add(SchemePageReachedEvent());
+                      });
+                    },)
+                ],
               )
 //              MyAppbar(
 //                //leading: Icon(Icons.arrow_back, color: Colors.white,),
@@ -91,7 +103,21 @@ class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStat
                   controller: _tabController,
                   children: <Widget>[
                     Center(child:
-                      Text('Schemes owned')
+                      dm.schemesOwned == null || dm.schemesOwned.isEmpty
+                          ? Text('No schemes owned')
+                          : ListView.builder(
+                          itemCount: dm.schemesOwned.length,
+                          itemBuilder: (context, i){
+                            SchemeMetadata meta = dm.schemesOwned[i];
+                            return ListTile(
+                              leading: meta.GetGameImage(),
+                              title: Text(meta.gameName),
+                              trailing: IconButton(
+                                icon: Icon(Icons.arrow_forward_ios, color: Colors.white,),
+                                onPressed: () {  },),
+                            );
+
+                          })
                     ),
                     Column(
                         children:[
@@ -109,7 +135,9 @@ class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStat
                                     Navigator.of(context).push(
                                         MaterialPageRoute(builder: (context) {
                                           return SchemeEditor(data.appStateStream);
-                                        }));
+                                        })).then((value) {
+                                      data.appStateEventSink.add(SchemePageReachedEvent());
+                                    });
 
                                   },),
                                 );
@@ -141,6 +169,84 @@ class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStat
         });
   }
 }
+
+class SchemeQueryInfo{
+  SchemeQueryInfo(this.numberOfDocuments, this.orderBy, this.descending, this.reset);
+  int numberOfDocuments;
+  String orderBy;
+  bool descending;
+
+  /// Reset current query results OR add to current results
+  bool reset;
+}
+
+class PublishedSchemeBrowser  extends StatefulWidget {
+
+  @override
+  _PublishedSchemeBrowserState createState() => _PublishedSchemeBrowserState();
+}
+
+class _PublishedSchemeBrowserState extends State<PublishedSchemeBrowser> {
+
+  DataBloc data = BlocProvider.instance.dataBloc;
+  final NetworkServices net = NetworkServiceProvider.instance.netService;
+
+  @override
+  void initState() {
+    print('_PublishedSchemeBrowserState initState called');
+    super.initState();
+    data.appStateEventSink.add(QueryForPublishedSchemes(new SchemeQueryInfo(10, 'upvotes', true, true)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    return StreamBuilder<AppStateState>(
+      initialData: AppStateState(data.model),
+      stream: data.appStateStream,
+      builder: (context, snapshot) {
+
+        DataModel model = snapshot.data.model;
+
+        return SafeArea(
+          child: Scaffold(
+            appBar: MyAppbar(
+              title: Text('Browse published schemes')
+            ),
+            body: Container(
+
+              child: model.schemesInShopBrowser.length == 0 ? Text('No results')
+              : ListView.builder(
+                  itemCount: model.schemesInShopBrowser.length,
+                  itemBuilder: (context, i){
+
+                    SchemeMetadata meta = model.schemesInShopBrowser[i];
+
+                    return ListTile(
+                      leading: meta.GetGameImage(),
+                      title: Text(meta.gameName),
+                      subtitle: Text('Upvotes: ${meta.upvotes}'),
+                      trailing: model.isSchemeOwned(meta.schemeID)
+                          ? Icon(Icons.check, color: Colors.white,)
+                          : IconButton(
+                        icon: Icon(Icons.file_download, color: Colors.white),
+                        onPressed: () {
+                          data.appStateEventSink.add(SchemeDownloaded(meta));
+                        },),
+                );
+              })
+
+            ).MY_BACKGROUND_CONTAINER(),
+          ),
+        );
+      }
+    );
+
+  }
+}
+
+
+
 
 class NewGameInfo {
   NewGameInfo(this.name, this.nickname, this.icon);
@@ -217,6 +323,7 @@ class _SchemeEditorState extends State<SchemeEditor> {
       builder: (context, snapshot) {
 
         DataModel model = snapshot.data.model;
+        User user = model.user;
         GameScheme scheme = model.schemeEditorState.schemeInEditor;
 
         bool swapMode = model.schemeEditorState.swapMode;
@@ -232,12 +339,14 @@ class _SchemeEditorState extends State<SchemeEditor> {
         return Scaffold(
           appBar: MyAppbar(
             leading: Icon(Icons.arrow_back, color: Colors.white,),
-            trailing: IconButton(icon: Icon(Icons.save, color: Colors.white,), onPressed: () { SaveThisScheme(model.user, scheme); },),
+            actions: <Widget>[
+              IconButton(icon: Icon(Icons.save, color: Colors.white,), onPressed: () { SaveThisScheme(model.user, scheme); },)
+            ] ,
             title: Text(
-                scheme == null ? '' : scheme.gameName,
+                scheme == null ? '' : scheme.meta.gameName,
                 style: TextStyle(color: Colors.white, fontSize: 20)),
-            startColor: Color.fromRGBO(3, 5, 9, 1.0),
-            endColor: Color.fromRGBO(32, 56, 100, 1.0),
+//            startColor: Color.fromRGBO(3, 5, 9, 1.0),
+//            endColor: Color.fromRGBO(32, 56, 100, 1.0),
           ),
           body: SafeArea(
             child: Column(
@@ -304,24 +413,38 @@ class _SchemeEditorState extends State<SchemeEditor> {
 
                  Container(
                    height: 100,
-                   child: Row(
-                     children:[
-                       Container(child: scheme == null ? Empty() : scheme.GetGameImage()).FLEXIBLE(),
+                   child: Column(
+                     children: <Widget>[
+                       Row(
+                           children:[
+                             Container(child: scheme == null ? Empty() : scheme.GetGameImage()).FLEXIBLE(),
+                             RaisedButton(
+                               child: Text(page == 0 ? 'Grid view' : 'List view'),
+                               onPressed: () {
+                                 ChangePage();
+                               },
+
+                             ),
+                             RaisedButton(
+                               child: Text(square.fighter == null ? 'Add Fighter' : 'Edit Fighter'),
+                               onPressed: () {
+                                 AddOrEditFighter(square);
+                               },
+
+                             ),
+                           ]
+                       ).FLEXIBLE(),
+
                        RaisedButton(
-                         child: Text(page == 0 ? 'Grid view' : 'List view'),
+                         child: Text('Upload'),
                          onPressed: () {
-                           ChangePage();
+                           net.UploadScheme(user, scheme);
                          },
 
-                       ),
-                       RaisedButton(
-                         child: Text(square.fighter == null ? 'Add Fighter' : 'Edit Fighter'),
-                         onPressed: () {
-                           AddOrEditFighter(square);
-                         },
+                       )
 
-                       ),
-                     ]
+
+                     ],
                    ),
                  ).FLEX(0),
 
@@ -721,8 +844,6 @@ class _FighterTableFromSchemeState extends State<FighterTableFromScheme> {
     return
       FutureBuilder<Image>(
         builder: (context,snapshot) {
-
-
 
           return GestureDetector(
             onScaleUpdate: (details){

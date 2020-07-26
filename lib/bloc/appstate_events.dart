@@ -11,10 +11,10 @@ class SchemeEditorEvent extends AppStateEvent{}
 
 class StartNewSchemeEditEvent extends SchemeEditorEvent{
   NewGameInfo info;
-  GameScheme scheme;
+  SchemeMetadata schemeMeta;
 
   StartNewSchemeEditEvent(this.info);
-  StartNewSchemeEditEvent.resume(this.scheme);
+  StartNewSchemeEditEvent.resume(this.schemeMeta);
 }
 class SchemeEditorCellPressedEvent extends SchemeEditorEvent{
   SchemeEditorCellPressedEvent(this.gridSelection);
@@ -51,4 +51,14 @@ class SchemePageReachedEvent extends AppStateEvent{}
 class SchemeEditLoadedEvent extends AppStateEvent{
   SchemeEditLoadedEvent(this.gs);
   GameScheme gs;
+}
+
+class QueryForPublishedSchemes extends AppStateEvent {
+  QueryForPublishedSchemes(this.queryInfo);
+  SchemeQueryInfo queryInfo;
+}
+
+class SchemeDownloaded extends AppStateEvent {
+  SchemeDownloaded(this.meta);
+  SchemeMetadata meta;
 }

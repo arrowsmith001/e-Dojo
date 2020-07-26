@@ -23,6 +23,6 @@ class FriendListEvent extends UserEvent{
 class SchemeEditsEvent extends UserEvent{
   SchemeEditsEvent(this.schemesInEditor);
 
-  List<GameSchemePrint> schemesInEditor;
+  List<SchemeMetadata> schemesInEditor;
 
 }

@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/bloc/bloc.dart';
 import 'package:edojo/bloc/auth_events.dart';
 import 'package:edojo/bloc/user_events.dart';
 import 'package:edojo/classes/misc.dart';
+import 'package:edojo/pages/schemes.dart';
 import 'package:edojo/tools/Assets.dart';
 import 'package:edojo/tools/storage.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -72,15 +74,16 @@ abstract class NetworkServices {
 
   Future<void> SaveSchemeToEdits(User user, GameScheme gameScheme);
 
-  Future<void> UploadScheme(GameScheme gameScheme);
+  Future<void> UploadScheme(User user, GameScheme gameScheme);
 
-  Future<void> GetScheme(String schemeCode);
+  /// Fetch scheme metadata for a given scheme code
+  Future<SchemeMetadata> GetSchemeMetaFromCode(String schemeCode);
 
   /// Fetch friend list for a given user
   Future<List<User>> GetFriends(User user);
 
   /// Fetch scheme code list for a given user
-  Future<List<String>> GetSchemeCodesOwned(User user);
+  Future<Map<String,String>> GetSchemeCodesOwned(User user);
 
   /// Fetch scheme for given code
   Future<GameScheme> GetSchemeFromCode(String schemeCode);
@@ -88,6 +91,10 @@ abstract class NetworkServices {
   Future<void> GetSchemeEdits(User user);
 
   Future<File> GetNetworkImage(String iconPath);
+
+  Future<List<SchemeMetadata>> QuerySchemes(SchemeQueryInfo queryInfo);
+
+  Future<void> AddToOwnedSchemes(User user, String schemeCode);
 
 }
 
@@ -115,6 +122,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
   DatabaseReference dbRef = FirebaseDatabase.instance.reference();
   StorageReference storeRef = FirebaseStorage.instance.ref();
+  Firestore firestoreRef = Firestore.instance;
 
   FirebaseUser firebaseUser;
   StreamSink<AuthEvent> authEventSink;
@@ -151,8 +159,8 @@ class AllFirebaseNetworkServices extends NetworkServices {
     // Make additions to the database: user object, name lookup
     Map<String, dynamic> updatesMap = {};
 
-    updatesMap['users/${user.userName}'] = user.toJson();
-    updatesMap['user_uids/${user.uid}'] = user.userName;
+    updatesMap['users/${user.meta.userName}'] = user.toJson();
+    updatesMap['user_uids/${user.meta.uid}'] = user.meta.userName;
 
     try {
       await dbRef.update(updatesMap);
@@ -199,10 +207,10 @@ class AllFirebaseNetworkServices extends NetworkServices {
     Map<String, dynamic> updatesMap = {};
     String key = dbRef.push().key;
 
-    updatesMap['users/${userSendingRequest.uid}/friendsPendingResponse/$key'] =
-        userSendingRequest.userName;
+    updatesMap['users/${userSendingRequest.meta.userName}/friendsPendingResponse/$key'] =
+        usernameOfRequestee;
     updatesMap['users/${usernameOfRequestee}/friendRequests/$key'] =
-        userSendingRequest.userName;
+        userSendingRequest.meta.userName;
 
     try {
       dbRef.update(updatesMap);
@@ -221,7 +229,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
     try {
       snap = await dbRef
           .child(
-              'users/${userAcceptingRequest.userName}/friendRequests/$requestKey')
+              'users/${userAcceptingRequest.meta.userName}/friendRequests/$requestKey')
           .once();
     } catch (e, s) {
       print('$e $s');
@@ -235,13 +243,10 @@ class AllFirebaseNetworkServices extends NetworkServices {
     String key = dbRef.push().key;
 
     updatesMap['users/${requestersName}/friendsPendingResponse/$key'] = null;
-    updatesMap['users/${userAcceptingRequest.userName}/friendRequests/$key'] =
-        null;
+    updatesMap['users/${userAcceptingRequest.meta.userName}/friendRequests/$key'] = null;
 
-    updatesMap['users/${requestersName}/friends/$key'] =
-        userAcceptingRequest.userName;
-    updatesMap['users/${userAcceptingRequest.userName}/friends/$key'] =
-        requestersName;
+    updatesMap['users/${requestersName}/friends/$key'] = userAcceptingRequest.meta.userName;
+    updatesMap['users/${userAcceptingRequest.meta.userName}/friends/$key'] = requestersName;
 
     try {
       dbRef.update(updatesMap);
@@ -264,21 +269,59 @@ class AllFirebaseNetworkServices extends NetworkServices {
   @override
   Future<List<User>> GetFriends(User user) async {
     // Test
-    DataSnapshot snap = await dbRef.child(user.uid).child('friends').once();
+    DataSnapshot snap = await dbRef.child('users').child(user.meta.userName).child('friends').once();
     print('(firebase) snap value as string: ' + snap.value.toString());
 
-    var httpClient = new http.Client();
-    var response = await httpClient.get(dbUrl + '/${user.uid}' + '/friends');
+    // TODO
 
-    print('(http) response as string: ' + response.body);
+//    var httpClient = new http.Client();
+//    var response = await httpClient.get(dbUrl + '/${user.uid}' + '/friends');
+
+//    print('(http) response as string: ' + response.body);
 
     return [];
   }
 
   @override
-  Future<List<String>> GetSchemeCodesOwned(User user) {
-    // TODO: implement getSchemeCodesOwned
-    throw UnimplementedError();
+  Future<Map<String,String>> GetSchemeCodesOwned(User user) async {
+    DataSnapshot snap = await dbRef.child('users/${user.meta.userName}/${User.SCHEMES_OWNED}').once();
+    return snap == null ? null : Map<String,String>.from(snap.value);
+  }
+
+  @override
+  Future<SchemeMetadata> GetSchemeMetaFromCode(String code) async {
+
+    print('GetSchemeMetaFromCode');
+
+    DataSnapshot snap = await dbRef.child('schemes/$code/meta').once();
+
+    Map<String,dynamic> map = Map<String,dynamic>.from(snap.value);
+    SchemeMetadata downloadedMeta = new SchemeMetadata.fromJson(map);
+
+    Directory tempDir = await StorageManager.instance.GetTempDir();
+
+    if(downloadedMeta.iconImgId != null)
+    {
+      String iconImgId = downloadedMeta.iconImgId;
+
+      // Ratify images against cache and, if not there, add them
+      String path = tempDir.path + '/icons/' + iconImgId + '.png';
+
+      File file = File(path);
+      if(!(await file.exists()))
+      {
+        print('$iconImgId does not exist, getting network image');
+        file = await GetNetworkImage(iconImgId);
+      }
+      else
+      {
+        print('file $iconImgId exists');
+      }
+
+      downloadedMeta.iconImg = Image.file(file);
+    }
+
+    return downloadedMeta;
   }
 
   @override
@@ -286,7 +329,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
     print('GetSchemeFromCode');
 
-      DataSnapshot snap = await dbRef.child('schemeEdits/$code').once();
+      DataSnapshot snap = await dbRef.child('schemes/$code').once();
 
       Map<String,dynamic> map = Map<String,dynamic>.from(snap.value);
       GameScheme downloadedScheme = new GameScheme.fromJson(map);
@@ -299,49 +342,27 @@ class AllFirebaseNetworkServices extends NetworkServices {
           String iconImgId = f.iconImgId;
           if(iconImgId == null) continue;
 
-          // Ratify images against cache and, if not there, add them
-          String path = tempDir.path + '/icons/' + iconImgId + '.png';
-
-          File file = File(path);
-          if(!(await file.exists()))
-            {
-              print('$iconImgId does not exist, getting network image');
-              file = await GetNetworkImage(iconImgId);
-            }
-          else
-            {
-              print('file $iconImgId exists');
-            }
+          File file = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId, tempDir);
 
           f.iconImg = Image.file(file);
     }
 
-      if(downloadedScheme.iconImgId != null)
+      if(downloadedScheme.meta.iconImgId != null)
         {
-          String iconImgId = downloadedScheme.iconImgId;
+          String iconImgId = downloadedScheme.meta.iconImgId;
 
-          // Ratify images against cache and, if not there, add them
-          String path = tempDir.path + '/icons/' + iconImgId + '.png';
+          File file = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId, tempDir);
 
-          File file = File(path);
-          if(!(await file.exists()))
-          {
-            print('$iconImgId does not exist, getting network image');
-            file = await GetNetworkImage(iconImgId);
-          }
-          else
-          {
-            print('file $iconImgId exists');
-          }
-
-          downloadedScheme.iconImg = Image.file(file);
+          downloadedScheme.meta.iconImg = Image.file(file);
         }
 
-      appStateEventSink.add(SchemeEditLoadedEvent(downloadedScheme));
+      return downloadedScheme;
+      //appStateEventSink.add(SchemeEditLoadedEvent(downloadedScheme));
 
 
   }
-  
+
+
   @override
   Future<void> SignOut() {
 
@@ -444,7 +465,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
         if(snap.value == null) // Not created at all
           {
             print('User not registered at all state');
-            authEventSink.add(LogInEvent(User.creation(fUserEvent.email, fUserEvent.uid))); // (1)
+            authEventSink.add(LogInEvent(User.init(new UserMetadata.basic(fUserEvent.email, fUserEvent.uid)))); // (1)
           }
         else // Has been fully created, return user
           {
@@ -482,19 +503,19 @@ class AllFirebaseNetworkServices extends NetworkServices {
   void _SetListeners(User user) {
 
     // FRIENDS
-    dbRef.child('users/${user.userName}/${User.FRIEND_REQUESTS}').onChildAdded.listen((event) { _HandleFriendRequestsChange(event, Ops.add); });
-    dbRef.child('users/${user.userName}/${User.FRIEND_LIST}').onChildAdded.listen((event) { _HandleFriendListChange(event, Ops.add); });
-    dbRef.child('users/${user.userName}/${User.FRIENDS_PENDING_RESPONSE}').onChildAdded.listen((event) { _HandleFriendListChange(event, Ops.add); });
+    dbRef.child('users/${user.meta.userName}/${User.FRIEND_REQUESTS}').onChildAdded.listen((event) { _HandleFriendRequestsChange(event, Ops.add); });
+    dbRef.child('users/${user.meta.userName}/${User.FRIEND_LIST}').onChildAdded.listen((event) { _HandleFriendListChange(event, Ops.add); });
+    dbRef.child('users/${user.meta.userName}/${User.FRIENDS_PENDING_RESPONSE}').onChildAdded.listen((event) { _HandleFriendListChange(event, Ops.add); });
 
-    dbRef.child('users/${user.userName}/${User.FRIEND_REQUESTS}').onChildRemoved.listen((event) { _HandleFriendRequestsChange(event, Ops.remove); });
-    dbRef.child('users/${user.userName}/${User.FRIEND_LIST}').onChildRemoved.listen((event) { _HandleFriendListChange(event, Ops.remove); });
-    dbRef.child('users/${user.userName}/${User.FRIENDS_PENDING_RESPONSE}').onChildRemoved.listen((event) { _HandleFriendListChange(event, Ops.remove); });
+    dbRef.child('users/${user.meta.userName}/${User.FRIEND_REQUESTS}').onChildRemoved.listen((event) { _HandleFriendRequestsChange(event, Ops.remove); });
+    dbRef.child('users/${user.meta.userName}/${User.FRIEND_LIST}').onChildRemoved.listen((event) { _HandleFriendListChange(event, Ops.remove); });
+    dbRef.child('users/${user.meta.userName}/${User.FRIENDS_PENDING_RESPONSE}').onChildRemoved.listen((event) { _HandleFriendListChange(event, Ops.remove); });
 
 
     // CHALLENGES
-    dbRef.child('users/${user.userName}/${User.CHALLENGE_REQUESTS}').onChildAdded.listen((event) { _HandleFriendRequestsChange(event, Ops.add); });
+    dbRef.child('users/${user.meta.userName}/${User.CHALLENGE_REQUESTS}').onChildAdded.listen((event) { _HandleFriendRequestsChange(event, Ops.add); });
 
-    dbRef.child('users/${user.userName}/${User.CHALLENGE_REQUESTS}').onChildRemoved.listen((event) { _HandleFriendRequestsChange(event, Ops.remove); });
+    dbRef.child('users/${user.meta.userName}/${User.CHALLENGE_REQUESTS}').onChildRemoved.listen((event) { _HandleFriendRequestsChange(event, Ops.remove); });
 
   }
 
@@ -516,15 +537,29 @@ class AllFirebaseNetworkServices extends NetworkServices {
   }
 
   @override
-  Future<void> GetScheme(String schemeCode) {
+  Future<GameScheme> GetScheme(String schemeCode) {
     // TODO: implement GetScheme
     throw UnimplementedError();
   }
 
   @override
-  Future<void> UploadScheme(Object args) {
-    // TODO: implement UploadScheme
-    throw UnimplementedError();
+  Future<void> UploadScheme(User user, GameScheme gameScheme) async {
+
+    Map<String,dynamic> schemeMetaMap = gameScheme.meta.GetMap();
+
+    QuerySnapshot qs = await firestoreRef.collection('publishedSchemes').where('databaseRef', isEqualTo: gameScheme.meta.schemeID).getDocuments();
+
+    if(qs.documents == null || qs.documents.length == 0) // Non-existent entry
+      {
+      await firestoreRef.collection('publishedSchemes').add(schemeMetaMap);
+      }
+    else
+      {
+        String docId = qs.documents[0].documentID;
+        await firestoreRef.document(docId).updateData(schemeMetaMap);
+      }
+
+
   }
 
 
@@ -550,13 +585,13 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
         storeRef.child(cloudPath).putFile(file);
 
-        // TODO Optimise this shit
+        // TODO Optimise this shit (no need to re-upload if upload exists already)
 
       }
 
-      if (gameScheme.iconImgId != null) {
+      if (gameScheme.meta.iconImgId != null) {
 
-        String iconImgId = gameScheme.iconImgId;
+        String iconImgId = gameScheme.meta.iconImgId;
         if (iconImgId != null)
           {
             String cloudPath = 'icons/' + iconImgId + '.png';
@@ -569,16 +604,16 @@ class AllFirebaseNetworkServices extends NetworkServices {
       Map<String, dynamic> updates = {};
       String key;
 
-      if(schemeClone.schemeID != null) key = schemeClone.schemeID;
+      if(schemeClone.meta.schemeID != null) key = schemeClone.meta.schemeID;
       else {
         key = dbRef.push().key;
-        schemeClone.schemeID = key;
-        gameScheme.schemeID = key;
+        schemeClone.meta.schemeID = key;
+        gameScheme.meta.schemeID = key;
 
-        updates.addAll({ 'users/${user.userName}/${User.SCHEMES_IN_EDITOR}/$key' : '' });
+        updates.addAll({ 'users/${user.meta.userName}/${User.SCHEMES_IN_EDITOR}/$key' : '' });
       }
 
-        updates.addAll({ 'schemeEdits/$key' : schemeClone.toJson() });
+        updates.addAll({ 'schemes/$key' : schemeClone.toJson() });
 
         print(schemeClone.toJson());
         await dbRef.update(updates);
@@ -629,6 +664,65 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
     // TODO Optimise this shit
   }
+
+  @override
+  Future<List<SchemeMetadata>> QuerySchemes(SchemeQueryInfo queryInfo) async {
+
+    QuerySnapshot qs = await firestoreRef.collection('publishedSchemes')
+        .orderBy(queryInfo.orderBy, descending: queryInfo.descending)
+        .limit(queryInfo.numberOfDocuments)
+        .getDocuments();
+
+    Directory tempDir = await getTemporaryDirectory();
+
+    List<SchemeMetadata> out = [];
+
+    for(DocumentSnapshot doc in qs.documents)
+      {
+        String schemeId = doc['databaseRef'];
+        String name = doc['name'];
+        String nickname = doc['nickname'];
+        String iconImgId = doc['iconRef'];
+        int upvotes = doc['upvotes'];
+
+        File imgFile;
+        if(iconImgId != null && iconImgId != '') imgFile = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId, tempDir);
+
+        out.add(new SchemeMetadata.fromQuery(schemeId, name, nickname, iconImgId, imgFile, upvotes));
+      }
+
+    return out;
+
+  }
+
+  Future<File> _ReturnNetworkImageFileOrCachedIfExists(String iconImgId, Directory tempDir) async {
+
+    // Ratify images against cache and, if not there, add them
+    String path = tempDir.path + '/icons/' + iconImgId + '.png';
+
+    File file = File(path);
+    if(!(await file.exists()))
+    {
+      print('$iconImgId does not exist, getting network image');
+      file = await GetNetworkImage(iconImgId);
+    }
+    else
+    {
+      print('file $iconImgId exists');
+    }
+
+    return file;
+  }
+
+  @override
+  Future<void> AddToOwnedSchemes(User user, String schemeCode) async {
+    String userName = user.meta.userName;
+
+    dbRef.child('users/$userName/${User.SCHEMES_OWNED}/$schemeCode').set('');
+
+  }
+
+
 
 
 }

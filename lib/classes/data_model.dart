@@ -24,13 +24,14 @@ class DataModel {
   /// Asks whether or not user account is fully set up yet
   bool isUserSetUp()
   {
-    return (user != null && user.userName != null);
+    return (user != null && user.meta.userName != null);
   }
 
   // APP STATE DATA //
   bool savingData = false;
 
-  List<GameScheme> schemesEditing = [];
+  List<SchemeMetadata> schemesEditing = [];
+  List<SchemeMetadata> schemesOwned = [];
 
   /// Determines state of scheme editor
   SchemeEditorState schemeEditorState = new SchemeEditorState();
@@ -50,12 +51,13 @@ class DataModel {
     return false;
   }
 
-  bool hasSchemeEditing(String code) {
-    for(GameScheme gs in schemesEditing)
-      {
-        if(gs.schemeID == code) return true;
-      }
+  bool hasSchemeMetaEditing(String code) {
+    for(SchemeMetadata gsm in schemesEditing) {if(gsm.schemeID == code) return true;}
+    return false;
+  }
 
+  bool hasSchemeMetaOwned(String code) {
+    for(SchemeMetadata gsm in schemesOwned) {if(gsm.schemeID == code) return true;}
     return false;
   }
 
@@ -63,12 +65,31 @@ class DataModel {
 
     if(user.schemesInEditor == null) user.schemesInEditor = {};
 
-    if(!user.schemesInEditor.keys.contains(schemeClone.schemeID))
+    if(!user.schemesInEditor.keys.contains(schemeClone.meta.schemeID))
       {
-        user.schemesInEditor.addAll({schemeClone.schemeID : ''});
+        user.schemesInEditor.addAll({schemeClone.meta.schemeID : ''});
       }
   }
 
+  /// List of schemes in shop browser
+  List<SchemeMetadata> schemesInShopBrowser = [];
+
+  void EditQueriedSchemes(List<SchemeMetadata> list, bool reset) {
+    if(reset)
+      {
+        schemesInShopBrowser = list;
+      }
+    else
+      {
+        schemesInShopBrowser.addAll(list);
+      }
+
+  }
+
+  bool isSchemeOwned(String schemeId) {
+    if(user == null || user.schemesOwned == null) return false;
+    return user.schemesOwned.containsKey(schemeId);
+  }
 
 
 
@@ -107,13 +128,13 @@ class SchemeEditorState
     String imgId;
     if(file != null)
       {
-        File newFile = await CacheFileForUpload(file);
+        File newFile = await CacheImageFileForUpload('icons',file);
         file = newFile;
         imgId = newFile.path.split('/').last.split('.').first;
       }
     else file = null;
 
-    schemeInEditor = GameScheme.initialGrid(info.name, info.nickname, imgId, 2, 5);
+    schemeInEditor = GameScheme.initialGrid(new SchemeMetadata.newScheme(info.name, info.nickname, imgId), 2, 6);
     schemeInEditor.SetImage(file);
 
     schemeEditorGridSelection = new GridSelection();
@@ -177,7 +198,7 @@ class SchemeEditorState
     List list = map['Icon'];
     if(list != null && list.isNotEmpty)
     {
-      File newFile = await CacheFileForUpload(list[0]);
+      File newFile = await CacheImageFileForUpload('icons',list[0]);
       map['Icon'] = newFile;
       imgId = newFile.path.split('/').last.split('.').first;
     }
@@ -236,7 +257,7 @@ class SchemeEditorState
     List list = map['Icon'];
     if(list != null && list.isNotEmpty)
     {
-      File newFile = await CacheFileForUpload(list[0]);
+      File newFile = await CacheImageFileForUpload('icons',list[0]);
       map['Icon'] = newFile;
       imgId = newFile.path.split('/').last.split('.').first;
     }

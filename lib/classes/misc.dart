@@ -17,26 +17,21 @@ part 'misc.g.dart';
 @JsonSerializable()
 class User
 {
+
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
   Map<String, dynamic> toJson() => _$UserToJson(this);
 
+  UserMetadata meta = new UserMetadata();
+
   User();
 
-  User.creation(this.email, this.uid);
-  User.basic(this.userName, this.displayName);
-
-  String email;
-  String uid;
-  DateTime joinDate;
-
-  String userName;
-  String displayName;
+  User.init(this.meta);
 
   void SetNamesAndJoinDate(String username, String displayName, DateTime joinDate)
   {
-    this.userName = username;
-    this.displayName = displayName;
-    this.joinDate = joinDate;
+    this.meta.userName = username;
+    this.meta.displayName = displayName;
+    this.meta.joinDate = joinDate;
   }
 
   // Stores as codes
@@ -49,6 +44,7 @@ class User
 
   // SchemesInEditor
   Map<String, String> schemesInEditor;
+  Map<String, String> schemesOwned;
 
   static const String FRIEND_LIST = 'friendList';
   static const String FRIENDS_PENDING_RESPONSE = 'friendsPendingResponse';
@@ -56,20 +52,85 @@ class User
   static const String CHALLENGE_REQUESTS = 'challengeRequests';
 
   static const String SCHEMES_IN_EDITOR = 'schemesInEditor';
+  static const String SCHEMES_OWNED = 'schemesOwned';
 
   @override String toString()
   {
-    return (userName ?? 'no userName') + ' | '
-        + (displayName ?? 'no displayName') + ' | '
-        + (email ?? 'no email') + ' | '
-        + (uid ?? 'no uid');
+    return (meta.userName ?? 'no userName') + ' | '
+        + (meta.displayName ?? 'no displayName') + ' | '
+        + (meta.email ?? 'no email') + ' | '
+        + (meta.uid ?? 'no uid');
   }
 
-  List<String> GetSchemeCodes() {
+  List<String> GetSchemeEditCodes() {
     return schemesInEditor == null ? null : schemesInEditor.keys.toList();
   }
 
+  String imgId;
 
+  @JsonKey(ignore: true)
+  File imgFile;
+
+  GetSchemesOwnedCodes() {
+    return schemesOwned == null ? null : schemesOwned.keys.toList();
+  }
+
+
+}
+
+@JsonSerializable()
+class UserMetadata{
+  factory UserMetadata.fromJson(Map<String, dynamic> json) => _$UserMetadataFromJson(json);
+  Map<String, dynamic> toJson() => _$UserMetadataToJson(this);
+
+  UserMetadata();
+  UserMetadata.basic(this.email, this.uid);
+
+  String userName;
+  String displayName;
+  String email;
+  String uid;
+  DateTime joinDate;
+  String imgId;
+}
+
+@JsonSerializable()
+class SchemeMetadata{
+  factory SchemeMetadata.fromJson(Map<String, dynamic> json) => _$SchemeMetadataFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SchemeMetadataToJson(this);
+
+  SchemeMetadata();
+  SchemeMetadata.newScheme(this.gameName, this.gameNickName, this.iconImgId);
+  SchemeMetadata.fromQuery(this.schemeID, this.gameName, this.gameNickName, this.iconImgId, this.iconImgFile, this.upvotes);
+
+  String schemeID;
+  String gameName;
+  String gameNickName;
+  int rosterNum = 0;
+  int upvotes = 0;
+  int releaseYear;
+  String iconImgId;
+
+  @JsonKey(ignore: true)
+  Image iconImg;
+  @JsonKey(ignore: true)
+  File iconImgFile;
+
+  Map<String, dynamic> GetMap() {
+    return {'databaseRef' : schemeID ?? '',
+      'iconRef' : iconImgId ?? '',
+      'name' : gameName ?? '',
+      'nickname' : gameNickName ?? '',
+      'upvotes' : upvotes };
+  }
+
+  Image GetGameImage() {
+    if(iconImgId == null) return Image.asset(Assets.DEFAULT_GAME);
+    if(iconImg != null) return iconImg;
+    if(iconImgFile != null) return Image.file(iconImgFile);
+    return Image.asset(Assets.BROKEN_LINK);
+  }
 }
 
 
@@ -88,9 +149,10 @@ class GameScheme
     return new GameScheme.fromJson(json);
   }
 
-  GameScheme(this.gameName, this.gameNickName);
-  GameScheme.withYear(this.gameName, this.gameNickName,this.releaseYear);
-  GameScheme.initialGrid(this.gameName, this.gameNickName, this.iconImgId, int rows, int cols){
+  GameScheme(this.meta);
+
+  GameScheme.initialGrid(this.meta, int rows, int cols){
+
     if(grid == null) grid = new SelectGrid();
     for(int i = 0; i<rows; i++)
     {
@@ -102,31 +164,19 @@ class GameScheme
     }
   }
 
-  String schemeID;
-  String gameName;
-  String gameNickName;
-
-  /// No path, no file ext
-  String iconImgId;
-
-  @JsonKey(ignore: true)
-  Image iconImg;
-  @JsonKey(ignore: true)
-  File iconImgFile;
-
-  int releaseYear;
+  SchemeMetadata meta = new SchemeMetadata();
 
   List<FighterScheme> roster;
   SelectGrid grid;
 
   Image GetGameImage()
   {
-    return iconImg != null ? iconImg : Image.asset(Assets.BROKEN_LINK);
+    return meta.GetGameImage();
   }
 
 
   void SetSchemeID(String schemeID) {
-    this.schemeID = schemeID;
+    this.meta.schemeID = schemeID;
 
     for(FighterScheme f in roster)
     {
@@ -136,7 +186,7 @@ class GameScheme
   void AddFighter(FighterScheme f) {
     if(roster == null) roster = [];
     if(roster.indexOf(f) != -1) return;
-    if(schemeID != null) {f.associatedGameID = schemeID;}
+    if(meta.schemeID != null) {f.associatedGameID = meta.schemeID;}
     _AddFighterToRoster(f);
 
     _AddFighterToGrid(f);
@@ -144,7 +194,7 @@ class GameScheme
   void AddFighterAt(FighterScheme f, int row, int col) {
     if(roster == null) roster = [];
     if(roster.indexOf(f) != -1) return;
-    if(schemeID != null) {f.associatedGameID = schemeID;}
+    if(meta.schemeID != null) {f.associatedGameID = meta.schemeID;}
     _AddFighterToRoster(f);
 
     _AddFighterToGridAt(f, row, col);
@@ -170,8 +220,8 @@ class GameScheme
   /// Deletes grid and images to make for a significantly smaller upload. Decent workaround for unnecessary storage space, for now. Must be called before uploading.
   void ClearVarsForUpload() {
     this.grid = null;
-    this.iconImg = null;
-    this.iconImgFile = null;
+    this.meta.iconImg = null;
+    this.meta.iconImgFile = null;
     for(FighterScheme f in roster) {
       f.iconImg = null;
       f.iconImgFile = null;
@@ -188,20 +238,15 @@ class GameScheme
 
   void SetImage(File iconImgFile){
     if(iconImgFile != null) {
-      this.iconImgFile = iconImgFile;
-      this.iconImg = Image.file(iconImgFile);
+      this.meta.iconImgFile = iconImgFile;
+      this.meta.iconImg = Image.file(iconImgFile);
     }
-    else this.iconImg = Image.asset(Assets.DEFAULT_GAME);
+    else this.meta.iconImg = Image.asset(Assets.DEFAULT_GAME);
   }
 
-
-}
-
-class GameSchemePrint {
-
-
-  String gameName;
-
+  SchemeMetadata GetMeta() {
+    return meta;
+  }
 
 
 }
@@ -290,8 +335,8 @@ class SelectGrid {
     }
 
 
-    while(dim.maxRow < row + 1) {addRow();}
-    while(dim.maxCol < col + 1) {addColumn();}
+    while(dim.maxRow < row) {addRow();}
+    while(dim.maxCol < col) {addColumn();}
 
     print('dim ${dim.maxRow} ${dim.maxCol}');
     print('${f.fighterName} AddingAt: ${row} ${col}');

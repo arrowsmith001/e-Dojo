@@ -24,18 +24,23 @@ class StorageManager{
   }
 }
 
-Future<File> CacheFileForUpload(File file) async {
+Future<File> CacheImageFileForUpload(String folderName, File file) async {
 
   Directory tempDir = StorageManager.instance.appDir == null ? await StorageManager.instance.GetTempDir() : StorageManager.instance.appDir;
   String tempPath = tempDir.path;
 
-  String imgId = Uuid().v1();
+  String imgId = GetUniqueIdentifier();
 
-  File newFile = new File(tempPath + '/icons/' + imgId + '.png');
+  File newFile = new File(tempPath + '/$folderName/' + imgId + '.png');
   if(!(await newFile.exists())) await newFile.create(recursive: true);
 
-  newFile = await file.copy(tempPath + '/icons/' + imgId + '.png');
+  newFile = await file.copy(tempPath + '/$folderName/' + imgId + '.png');
   await file.delete();
 
   return newFile;
+}
+
+String GetUniqueIdentifier() {
+  return Uuid().v1();
+  // TODO Is this really unique?
 }

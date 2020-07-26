@@ -156,22 +156,40 @@ class DataBloc extends Bloc {
 
       if(event is SchemePageReachedEvent)
         {
-          if(model.user.GetSchemeCodes() == null) return;
-
-          for(String code in model.user.GetSchemeCodes())
+          if(model.user.GetSchemeEditCodes() != null)
             {
-              if(!model.hasSchemeEditing(code))
+              for(String code in model.user.GetSchemeEditCodes())
+              {
+                if(!model.hasSchemeMetaEditing(code))
                 {
-                  NetworkServiceProvider.instance.netService.GetSchemeFromCode(code);
+                  SchemeMetadata schemeMeta = await NetworkServiceProvider.instance.netService.GetSchemeMetaFromCode(code);
+                  model.schemesEditing.add(schemeMeta);
                 }
+              }
             }
+
+          if(model.user.GetSchemesOwnedCodes() != null) {
+            for (String code in model.user.GetSchemesOwnedCodes()) {
+              if (!model.hasSchemeMetaOwned(code)) {
+                SchemeMetadata schemeMeta = await NetworkServiceProvider
+                    .instance.netService.GetSchemeMetaFromCode(code);
+                model.schemesOwned.add(schemeMeta);
+              }
+            }
+          }
+            _appStateSink.add(AppStateState(model));
+            _userSink.add(UserState(model));
         }
 
       if(event is SchemeEditorEvent) {
             if(event is StartNewSchemeEditEvent)
             {
-              if(event.scheme != null) model.schemeEditorState.EditExistingScheme(event.scheme);
-              else {
+              if(event.schemeMeta != null)
+                {
+                  GameScheme scheme = await NetworkServiceProvider.instance.netService.GetSchemeFromCode(event.schemeMeta.schemeID);
+                  model.schemeEditorState.EditExistingScheme(scheme);
+                }
+              else if(event.info != null) {
                 await model.schemeEditorState.EditNewScheme(event.info);
               }
                 _appStateSink.add(AppStateState(model));
@@ -220,12 +238,32 @@ class DataBloc extends Bloc {
 
       if(event is SchemeEditLoadedEvent)
         {
-          model.schemesEditing.add(event.gs);
-
-          _appStateSink.add(AppStateState(model));
-          _userSink.add(UserState(model));
+//          model.schemesEditing.add(event.gs);
+//
+//          _appStateSink.add(AppStateState(model));
+//          _userSink.add(UserState(model));
         }
 
+      if(event is QueryForPublishedSchemes)
+        {
+          List<SchemeMetadata> list = await NetworkServiceProvider.instance.netService.QuerySchemes(event.queryInfo);
+
+          model.EditQueriedSchemes(list, event.queryInfo.reset);
+
+          _appStateSink.add(AppStateState(model));
+
+
+        }
+
+      if(event is SchemeDownloaded)
+        {
+          NetworkServices net = NetworkServiceProvider.instance.netService;
+          await net.AddToOwnedSchemes(model.user, event.meta.schemeID);
+
+          model.user.schemesOwned = await net.GetSchemeCodesOwned(model.user);
+
+          _appStateSink.add(AppStateState(model));
+        }
     }
   }
 

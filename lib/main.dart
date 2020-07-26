@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:gradient_app_bar/gradient_app_bar.dart';
 
+import 'package:edojo/widgets/my_app_bar.dart';
 import 'bloc/auth_events.dart';
 import 'pages/home.dart';
 
@@ -112,8 +113,8 @@ class RootDefault extends StatelessWidget {
             //leading: Icon(Icons.arrow_back, color: Colors.white,),
             title: Text(title,
                 style: TextStyle(color: Colors.white, fontSize: 20)),
-            startColor: Color.fromRGBO(3, 5, 9, 1.0),
-            endColor: Color.fromRGBO(32, 56, 100, 1.0),
+//            startColor: Color.fromRGBO(3, 5, 9, 1.0),
+//            endColor: Color.fromRGBO(32, 56, 100, 1.0),
           ),
           body: SafeArea(
             child: Center(
@@ -190,8 +191,8 @@ class SignInPage extends StatelessWidget {
               appBar: MyAppbar(
                 leading: IconButton(icon: Icon(Icons.arrow_back), color: Colors.white, onPressed: () { Navigator.of(context).pop(); },),
                 title: Text(title, style: TextStyle(color:Colors.white, fontSize: 20)),
-                startColor: Color.fromRGBO(3, 5, 9, 1.0),
-                endColor: Color.fromRGBO(32, 56, 100, 1.0),
+//                startColor: Color.fromRGBO(3, 5, 9, 1.0),
+//                endColor: Color.fromRGBO(32, 56, 100, 1.0),
               ),
               body: SafeArea(
                 child: FormBuilder(
@@ -283,8 +284,8 @@ class SignUpPage extends StatelessWidget {
               appBar: MyAppbar(
                 leading: IconButton(icon: Icon(Icons.arrow_back), color: Colors.white, onPressed: () { Navigator.of(context).pop(); },),
                 title: Text(title, style: TextStyle(color:Colors.white, fontSize: 20)),
-                startColor: Color.fromRGBO(3, 5, 9, 1.0),
-                endColor: Color.fromRGBO(32, 56, 100, 1.0),
+//                startColor: Color.fromRGBO(3, 5, 9, 1.0),
+//                endColor: Color.fromRGBO(32, 56, 100, 1.0),
               ),
               body: SafeArea(
                 child: FormBuilder(
