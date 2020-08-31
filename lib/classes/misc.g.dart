@@ -22,12 +22,16 @@ User _$UserFromJson(Map json) {
     ..friendRequests = (json['friendRequests'] as Map)?.map(
       (k, e) => MapEntry(k as String, e as String),
     )
-    ..challengeRequests = (json['challengeRequests'] as Map)?.map(
-      (k, e) => MapEntry(k as String, e as String),
-    )
     ..schemesInEditor = (json['schemesInEditor'] as Map)?.map(
       (k, e) => MapEntry(k as String, e as String),
     )
+    ..schemesOwned = (json['schemesOwned'] as Map)?.map(
+      (k, e) => MapEntry(k as String, e as String),
+    )
+    ..challengeRequests = (json['challengeRequests'] as Map)?.map(
+      (k, e) => MapEntry(k as String, e as String),
+    )
+    ..challengeInProgressId = json['challengeInProgressId'] as String
     ..imgId = json['imgId'] as String;
 }
 
@@ -44,8 +48,10 @@ Map<String, dynamic> _$UserToJson(User instance) {
   writeNotNull('friendList', instance.friendList);
   writeNotNull('friendsPendingResponse', instance.friendsPendingResponse);
   writeNotNull('friendRequests', instance.friendRequests);
-  writeNotNull('challengeRequests', instance.challengeRequests);
   writeNotNull('schemesInEditor', instance.schemesInEditor);
+  writeNotNull('schemesOwned', instance.schemesOwned);
+  writeNotNull('challengeRequests', instance.challengeRequests);
+  writeNotNull('challengeInProgressId', instance.challengeInProgressId);
   writeNotNull('imgId', instance.imgId);
   return val;
 }
@@ -87,8 +93,8 @@ SchemeMetadata _$SchemeMetadataFromJson(Map json) {
     ..gameNickName = json['gameNickName'] as String
     ..rosterNum = json['rosterNum'] as int
     ..upvotes = json['upvotes'] as int
-    ..iconImgId = json['iconImgId'] as String
-    ..releaseYear = json['releaseYear'] as int;
+    ..releaseYear = json['releaseYear'] as int
+    ..iconImgId = json['iconImgId'] as String;
 }
 
 Map<String, dynamic> _$SchemeMetadataToJson(SchemeMetadata instance) {
@@ -105,8 +111,8 @@ Map<String, dynamic> _$SchemeMetadataToJson(SchemeMetadata instance) {
   writeNotNull('gameNickName', instance.gameNickName);
   writeNotNull('rosterNum', instance.rosterNum);
   writeNotNull('upvotes', instance.upvotes);
-  writeNotNull('iconImgId', instance.iconImgId);
   writeNotNull('releaseYear', instance.releaseYear);
+  writeNotNull('iconImgId', instance.iconImgId);
   return val;
 }
 
@@ -255,5 +261,31 @@ Map<String, dynamic> _$FighterSchemeToJson(FighterScheme instance) {
   writeNotNull('fighterName', instance.fighterName);
   writeNotNull('iconImgId', instance.iconImgId);
   writeNotNull('variants', instance.variants);
+  return val;
+}
+
+Challenge _$ChallengeFromJson(Map json) {
+  return Challenge()
+    ..challengeId = json['challengeId'] as String
+    ..schemeId = json['schemeId'] as String
+    ..player1Id = json['player1Id'] as String
+    ..player2Id = json['player2Id'] as String
+    ..stage = json['stage'] as String;
+}
+
+Map<String, dynamic> _$ChallengeToJson(Challenge instance) {
+  final val = <String, dynamic>{};
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('challengeId', instance.challengeId);
+  writeNotNull('schemeId', instance.schemeId);
+  writeNotNull('player1Id', instance.player1Id);
+  writeNotNull('player2Id', instance.player2Id);
+  writeNotNull('stage', instance.stage);
   return val;
 }

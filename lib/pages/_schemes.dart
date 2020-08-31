@@ -6,7 +6,6 @@ import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/bloc/appstate_states.dart';
 import 'package:edojo/bloc/bloc.dart';
 import 'package:edojo/bloc/auth_states.dart';
-import 'package:edojo/bloc/user_states.dart';
 import 'package:edojo/classes/data_model.dart';
 import 'package:edojo/tools/assets.dart';
 import 'package:edojo/tools/network.dart';
@@ -25,12 +24,12 @@ import 'package:uuid/uuid.dart';
 
 import '../main.dart';
 
-class GoToSchemes extends StatefulWidget {
+class SchemesPage extends StatefulWidget {
   @override
-  _GoToSchemesState createState() => _GoToSchemesState();
+  _SchemesPageState createState() => _SchemesPageState();
 }
 
-class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStateMixin {
+class _SchemesPageState extends State<SchemesPage> with SingleTickerProviderStateMixin {
   final DataBloc data = BlocProvider.instance.dataBloc;
   final NetworkServices net = NetworkServiceProvider.instance.netService;
 
@@ -39,7 +38,7 @@ class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    data.appStateEventSink.add(SchemePageReachedEvent());
+    data.appStateEventSink.add(RefreshSchemesEditingAndOwned());
 
     _tabController = TabController(vsync: this, length: 2);
 
@@ -51,17 +50,17 @@ class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStat
         MaterialPageRoute(builder: (context) {
           return SchemeEditor(data.appStateStream);
         })).then((value) {
-      data.appStateEventSink.add(SchemePageReachedEvent());
+      data.appStateEventSink.add(RefreshSchemesEditingAndOwned());
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<UserState>(
-        stream: data.userStream,
-        initialData: UserState(data.model),
+    return StreamBuilder<AppStateState>(
+        stream: data.appStateStream,
+        initialData: AppStateState(data.model),
         builder: (context, snapshot) {
-          UserState ds = snapshot.data;
+          AppStateState ds = snapshot.data;
           DataModel dm = ds.model;
 
           return Scaffold(
@@ -80,7 +79,7 @@ class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStat
                     onPressed: () {
                       Navigator.of(context).push(MaterialPageRoute(builder: (context) => PublishedSchemeBrowser()))
                           .then((value) {
-                        data.appStateEventSink.add(SchemePageReachedEvent());
+                        data.appStateEventSink.add(RefreshSchemesEditingAndOwned());
                       });
                     },)
                 ],
@@ -136,7 +135,7 @@ class _GoToSchemesState extends State<GoToSchemes> with SingleTickerProviderStat
                                         MaterialPageRoute(builder: (context) {
                                           return SchemeEditor(data.appStateStream);
                                         })).then((value) {
-                                      data.appStateEventSink.add(SchemePageReachedEvent());
+                                      data.appStateEventSink.add(RefreshSchemesEditingAndOwned());
                                     });
 
                                   },),

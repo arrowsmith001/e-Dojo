@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:edojo/bloc/appstate_events.dart';
-import 'package:edojo/bloc/user_events.dart';
-import 'package:edojo/bloc/user_states.dart';
 import 'package:edojo/classes/data_model.dart';
 import 'package:edojo/classes/misc.dart';
 import 'package:edojo/tools/network.dart';
@@ -34,7 +32,6 @@ class BlocProvider
 class DataBloc extends Bloc {
   DataBloc() {
     authEventController.stream.asBroadcastStream().listen(mapEventToState);
-    userEventController.stream.asBroadcastStream().listen(mapEventToState);
     appStateEventController.stream.asBroadcastStream().listen((event) {mapEventToState(event);});
   }
 
@@ -47,15 +44,6 @@ class DataBloc extends Bloc {
   final authStateController = StreamController<AuthState>.broadcast();
   StreamSink<AuthState> get _authSink => authStateController.sink;
   Stream<AuthState> get authStream => authStateController.stream;
-
-
-  // USER
-  final userEventController = StreamController<UserEvent>();
-  StreamSink<UserEvent> get userEventSink => userEventController.sink;
-
-  final userStateController = StreamController<UserState>.broadcast();
-  StreamSink<UserState> get _userSink => userStateController.sink;
-  Stream<UserState> get userStream => userStateController.stream;
 
 
   // APP STATE
@@ -132,41 +120,28 @@ class DataBloc extends Bloc {
         _authSink.add(AuthState(model));
       }
 
-    if(event is UserEvent){
-
-      if(event is HelloUserEvent)
-        {
-
-
-          _userSink.add(HelloUserState(model));
-        }
-
-      if(event is FriendListEvent)
-        {
-
-
-
-
-        }
-
-
-    }
 
     if(event is AppStateEvent) {
 
-      if(event is SchemePageReachedEvent)
+
+      if(event is HelloUserEvent)
+      {
+        _appStateSink.add(AppStateState(model));
+      }
+
+      if(event is RefreshSchemesEditingAndOwned)
         {
           if(model.user.GetSchemeEditCodes() != null)
+          {
+            for(String code in model.user.GetSchemeEditCodes())
             {
-              for(String code in model.user.GetSchemeEditCodes())
+              if(!model.hasSchemeMetaEditing(code))
               {
-                if(!model.hasSchemeMetaEditing(code))
-                {
-                  SchemeMetadata schemeMeta = await NetworkServiceProvider.instance.netService.GetSchemeMetaFromCode(code);
-                  model.schemesEditing.add(schemeMeta);
-                }
+                SchemeMetadata schemeMeta = await NetworkServiceProvider.instance.netService.GetSchemeMetaFromCode(code);
+                model.schemesEditing.add(schemeMeta);
               }
             }
+          }
 
           if(model.user.GetSchemesOwnedCodes() != null) {
             for (String code in model.user.GetSchemesOwnedCodes()) {
@@ -177,8 +152,7 @@ class DataBloc extends Bloc {
               }
             }
           }
-            _appStateSink.add(AppStateState(model));
-            _userSink.add(UserState(model));
+          _appStateSink.add(AppStateState(model));
         }
 
       if(event is SchemeEditorEvent) {
@@ -261,6 +235,40 @@ class DataBloc extends Bloc {
           await net.AddToOwnedSchemes(model.user, event.meta.schemeID);
 
           model.user.schemesOwned = await net.GetSchemeCodesOwned(model.user);
+
+          _appStateSink.add(AppStateState(model));
+        }
+
+      if(event is RefreshFriendCodesAndChallengeCodes)
+        {
+          if(model.user.GetFriendCodes() != null)
+          {
+            for(String userName in model.user.GetFriendCodes())
+            {
+              if(!model.hasFriendMeta(userName))
+              {
+                UserMetadata userMeta = await NetworkServiceProvider.instance.netService.GetUserMeta(userName);
+                model.AddFriendMeta(userMeta);
+              }
+            }
+          }
+
+          if(model.user.GetChallengeCodes() != null) {
+            for (String code in model.user.GetChallengeCodes()) {
+              if (!model.hasChallenge(code)) {
+                Challenge challenge = await NetworkServiceProvider
+                    .instance.netService.GetChallengeFromCode(code);
+                model.AddChallenge(challenge);
+              }
+            }
+          }
+
+          _appStateSink.add(AppStateState(model));
+        }
+
+      if(event is ChangeSchemeEquipped)
+        {
+          model.schemeEquipped = event.smd;
 
           _appStateSink.add(AppStateState(model));
         }

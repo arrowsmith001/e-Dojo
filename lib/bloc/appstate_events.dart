@@ -3,11 +3,31 @@ import 'dart:io';
 import 'package:edojo/bloc/bloc.dart';
 import 'package:edojo/classes/data_model.dart';
 import 'package:edojo/classes/misc.dart';
-import 'package:edojo/pages/schemes.dart';
+import 'package:edojo/pages/_schemes.dart';
 
 class AppStateEvent extends BlocEvent{}
 
 class SchemeEditorEvent extends AppStateEvent{}
+
+class HelloUserEvent extends AppStateEvent{
+  HelloUserEvent(this.user);
+
+  User user;
+}
+
+class FriendListEvent extends AppStateEvent{
+  FriendListEvent(this.friendList);
+
+  List<User> friendList;
+
+}
+
+class SchemeEditsEvent extends AppStateEvent{
+  SchemeEditsEvent(this.schemesInEditor);
+
+  List<SchemeMetadata> schemesInEditor;
+
+}
 
 class StartNewSchemeEditEvent extends SchemeEditorEvent{
   NewGameInfo info;
@@ -47,11 +67,14 @@ class NewSchemeEditUploadedEvent extends SchemeEditorEvent{
 }
 
 
-class SchemePageReachedEvent extends AppStateEvent{}
+class RefreshSchemesEditingAndOwned extends AppStateEvent{}
 class SchemeEditLoadedEvent extends AppStateEvent{
   SchemeEditLoadedEvent(this.gs);
   GameScheme gs;
 }
+
+class RefreshFriendCodesAndChallengeCodes extends AppStateEvent{}
+
 
 class QueryForPublishedSchemes extends AppStateEvent {
   QueryForPublishedSchemes(this.queryInfo);
@@ -61,4 +84,9 @@ class QueryForPublishedSchemes extends AppStateEvent {
 class SchemeDownloaded extends AppStateEvent {
   SchemeDownloaded(this.meta);
   SchemeMetadata meta;
+}
+
+class ChangeSchemeEquipped extends AppStateEvent {
+  ChangeSchemeEquipped(this.smd);
+  SchemeMetadata smd;
 }

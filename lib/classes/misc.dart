@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:reorderables/generated/i18n.dart';
 part 'misc.g.dart';
 
 
@@ -40,11 +41,14 @@ class User
   Map<String, String> friendRequests;
 
   // Stores as codes
-  Map<String, String> challengeRequests;
 
   // SchemesInEditor
   Map<String, String> schemesInEditor;
   Map<String, String> schemesOwned;
+
+  // Challenge
+  Map<String, String> challengeRequests;
+  String challengeInProgressId;
 
   static const String FRIEND_LIST = 'friendList';
   static const String FRIENDS_PENDING_RESPONSE = 'friendsPendingResponse';
@@ -53,6 +57,8 @@ class User
 
   static const String SCHEMES_IN_EDITOR = 'schemesInEditor';
   static const String SCHEMES_OWNED = 'schemesOwned';
+
+  static const String CHALLENGE_IN_PROGRESS = 'challengeInProgressId';
 
   @override String toString()
   {
@@ -71,8 +77,16 @@ class User
   @JsonKey(ignore: true)
   File imgFile;
 
-  GetSchemesOwnedCodes() {
+  List<String> GetSchemesOwnedCodes() {
     return schemesOwned == null ? null : schemesOwned.keys.toList();
+  }
+
+  List<String> GetFriendCodes() {
+    return friendList == null ? null : friendList.values.toList();
+  }
+
+  List<String> GetChallengeCodes() {
+    return challengeRequests == null ? null : challengeRequests.values.toList();
   }
 
 
@@ -502,9 +516,23 @@ class FighterScheme {
   // TODO Map to grid position
 }
 
-
+@JsonSerializable()
 class Challenge{
+  factory Challenge.fromJson(Map<String, dynamic> json) => _$ChallengeFromJson(json);
+  Map<String, dynamic> toJson() => _$ChallengeToJson(this);
 
+  Challenge();
 
+  // ID information
+  String challengeId;
+  String schemeId;
 
+  // Competing parties
+  String player1Id;
+  String player2Id;
+
+  // Challenge status
+  static const String STAGE_SELECTION = 'selection';
+  static const String STAGE_RECORDING = 'recording';
+  String stage;
 }

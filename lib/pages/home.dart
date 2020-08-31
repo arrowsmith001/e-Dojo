@@ -6,7 +6,7 @@ import 'package:edojo/widgets/my_app_bar.dart';
 import 'package:edojo/bloc/bloc.dart';
 import 'package:edojo/bloc/auth_states.dart';
 import 'package:edojo/classes/misc.dart';
-import 'package:edojo/pages/schemes.dart';
+import 'package:edojo/pages/_schemes.dart';
 import 'package:edojo/tools/assets.dart';
 import 'package:edojo/tools/network.dart';
 import 'package:edojo/widgets/layout.dart';
@@ -16,6 +16,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:edojo/widgets/extensions.dart';
 
 import '../main.dart';
+import '_challenges.dart';
 
 class HomePage extends StatefulWidget{
 
@@ -94,9 +95,9 @@ class _HomeDefaultState extends State<HomeDefault> {
                           crossAxisCount: 2,
                           children: <Widget>[
 
-                            BigMainButton(context, image: Image.asset(Assets.FISTS), widget: Empty(), color: Colors.yellow, title: 'Challenges').padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context, image: Image.asset(Assets.FISTS), widget: ChallengesPage(), color: Colors.yellow, title: 'Challenges').padding(EdgeInsets.all(20.0)),
                             BigMainButton(context,image: Image.asset(Assets.FIGHTER), widget: Empty(), color: Colors.blue, title: 'View Fighter Profile').padding(EdgeInsets.all(20.0)),
-                            BigMainButton(context, image: Image.asset(Assets.GAME),widget: GoToSchemes(), color: Colors.purpleAccent, title: 'Manage Schemes').padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context, image: Image.asset(Assets.GAME),widget: SchemesPage(), color: Colors.purpleAccent, title: 'Manage Schemes').padding(EdgeInsets.all(20.0)),
                             BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.orange, title: 'Explore Data').padding(EdgeInsets.all(20.0)),
                             BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'General settings').padding(EdgeInsets.all(20.0)),
                             BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'Account settings').padding(EdgeInsets.all(20.0)),
@@ -110,6 +111,8 @@ class _HomeDefaultState extends State<HomeDefault> {
         });
   }
 }
+
+
 
 
 class BigMainButton extends StatelessWidget{

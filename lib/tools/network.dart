@@ -5,9 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/bloc/bloc.dart';
 import 'package:edojo/bloc/auth_events.dart';
-import 'package:edojo/bloc/user_events.dart';
 import 'package:edojo/classes/misc.dart';
-import 'package:edojo/pages/schemes.dart';
+import 'package:edojo/pages/_schemes.dart';
 import 'package:edojo/tools/Assets.dart';
 import 'package:edojo/tools/storage.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -62,7 +61,7 @@ abstract class NetworkServices {
       User userAcceptingRequest, String usernameOfRequester);
 
   /// Send somebody a request for a challenge
-  Future<void> SendChallengeRequest(
+  Future<void> SendChallengeRequest(Challenge challenge,
       User userSendingRequest, String usernameOfRequestee);
 
   /// Accept someones request for a challenge
@@ -96,6 +95,10 @@ abstract class NetworkServices {
 
   Future<void> AddToOwnedSchemes(User user, String schemeCode);
 
+  Future<UserMetadata> GetUserMeta(String userName);
+
+  Future<Challenge> GetChallengeFromCode(String code);
+
 }
 
 // TODO Make a network service that's solely (local) SQL
@@ -113,7 +116,6 @@ class AllFirebaseNetworkServices extends NetworkServices {
     //FirebaseApp.configure(name: null, options: null);
 
     this.authEventSink = BlocProvider.instance.dataBloc.authEventSink;
-    this.userEventSink = BlocProvider.instance.dataBloc.userEventSink;
     this.appStateEventSink = BlocProvider.instance.dataBloc.appStateEventSink;
     FirebaseAuth.instance.onAuthStateChanged.asBroadcastStream().listen(_HandleAuthStateEvent);
   }
@@ -126,7 +128,6 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
   FirebaseUser firebaseUser;
   StreamSink<AuthEvent> authEventSink;
-  StreamSink<UserEvent> userEventSink;
   StreamSink<AppStateEvent> appStateEventSink;
 
   @override
@@ -259,7 +260,21 @@ class AllFirebaseNetworkServices extends NetworkServices {
   /// Send somebody a request for a challenge
   @override
   Future<void> SendChallengeRequest(
-      User userSendingRequest, String usernameOfRequestee) async {}
+      Challenge challenge,
+      User userSendingRequest, String usernameOfRequestee) async {
+
+    // TODO Code to send a challenge (adding it to RTD), have challenge appear on challenges pending response, for self as well as other participant
+
+    String challengeRequestKey = dbRef.push().key;
+
+    Map<String,dynamic> updates = {};
+
+    updates.addAll({'challenges/$challengeRequestKey' : challenge.toJson()});
+    updates.addAll({userSendingRequest.meta.userName + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
+    updates.addAll({usernameOfRequestee + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
+
+    await dbRef.update(updates);
+  }
 
   /// Accept someones request for a challenge
   @override
@@ -479,7 +494,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
                 User user = User.fromJson(Map<String, dynamic>.from(snap.value));
 
                 authEventSink.add(LogInEvent(user)); // (2)
-                userEventSink.add(HelloUserEvent(user)); // (3)
+                appStateEventSink.add(HelloUserEvent(user)); // (3)
                 
                 _SetListeners(user);
               }
@@ -720,6 +735,19 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
     dbRef.child('users/$userName/${User.SCHEMES_OWNED}/$schemeCode').set('');
 
+  }
+
+  @override
+  Future<UserMetadata> GetUserMeta(String userName) async {
+    DataSnapshot snap = await dbRef.child('users').child('userName').child('meta').once();
+    UserMetadata userMeta = UserMetadata.fromJson(Map<String,dynamic>.from(snap.value));
+    return userMeta;
+  }
+
+  @override
+  Future<Challenge> GetChallengeFromCode(String code) async {
+    DataSnapshot snap = await dbRef.child('challenges/$code').once();
+    return Challenge.fromJson(Map<String,dynamic>.from(snap.value));
   }
 
 

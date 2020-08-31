@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:edojo/pages/schemes.dart';
+import 'package:edojo/pages/_schemes.dart';
 import 'package:edojo/tools/network.dart';
 import 'package:edojo/tools/storage.dart';
 
@@ -22,10 +22,7 @@ class DataModel {
   }
 
   /// Asks whether or not user account is fully set up yet
-  bool isUserSetUp()
-  {
-    return (user != null && user.meta.userName != null);
-  }
+  bool isUserSetUp() {return (user != null && user.meta.userName != null);}
 
   // APP STATE DATA //
   bool savingData = false;
@@ -33,21 +30,23 @@ class DataModel {
   List<SchemeMetadata> schemesEditing = [];
   List<SchemeMetadata> schemesOwned = [];
 
-  /// Determines state of scheme editor
+  /// List of schemes in shop browser
+  List<SchemeMetadata> schemesInShopBrowser = [];
+
+  // Scheme 'equipped' by user
+  SchemeMetadata schemeEquipped;
+
+  List<UserMetadata> friendsList = [];
+  List<Challenge> challengesList = [];
+
+  /// Tracks state of various pages
   SchemeEditorState schemeEditorState = new SchemeEditorState();
+  ChallengeState challengeState = new ChallengeState();
 
   /// Asks if schemes currently being edited are loaded
   bool areSchemeEditsLoaded() {
-    if((user.schemesInEditor == null || user.schemesInEditor.length == 0) && schemesEditing.length == 0)
-      {
-        return true;
-      }
-
-    if(user.schemesInEditor != null && user.schemesInEditor.length == schemesEditing.length)
-      {
-        return true;
-      }
-
+    if((user.schemesInEditor == null || user.schemesInEditor.length == 0) && schemesEditing.length == 0) {return true;}
+    if(user.schemesInEditor != null && user.schemesInEditor.length == schemesEditing.length) {return true;}
     return false;
   }
 
@@ -71,8 +70,6 @@ class DataModel {
       }
   }
 
-  /// List of schemes in shop browser
-  List<SchemeMetadata> schemesInShopBrowser = [];
 
   void EditQueriedSchemes(List<SchemeMetadata> list, bool reset) {
     if(reset)
@@ -90,6 +87,34 @@ class DataModel {
     if(user == null || user.schemesOwned == null) return false;
     return user.schemesOwned.containsKey(schemeId);
   }
+
+  bool hasFriendMeta(String userName) {
+
+    for(UserMetadata umd in friendsList) {if(umd.userName == userName) return true;}
+    return false;
+  }
+
+  void AddFriendMeta(UserMetadata userMeta) {
+    this.friendsList.add(userMeta);
+  }
+
+  bool hasChallenge(String code) {
+    for(Challenge ch in challengesList) {if(ch.challengeId == code) return true;}
+    return false;
+  }
+
+  void AddChallenge(Challenge challenge) {
+    for(Challenge ch in challengesList) {if(ch.challengeId == challenge.challengeId) return;}
+    challengesList.add(challenge);
+  }
+
+
+
+}
+
+class ChallengeState {
+
+  Challenge challengeInProgress;
 
 
 
