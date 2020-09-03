@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:edojo/classes/data_model.dart';
+import 'package:edojo/pages/_challenges.dart';
 import 'package:edojo/tools/assets.dart';
 import 'package:edojo/tools/network.dart';
 import 'package:edojo/tools/storage.dart';
@@ -72,17 +73,26 @@ class User
     return schemesInEditor == null ? null : schemesInEditor.keys.toList();
   }
 
-  String imgId;
 
-  @JsonKey(ignore: true)
-  File imgFile;
 
   List<String> GetSchemesOwnedCodes() {
     return schemesOwned == null ? null : schemesOwned.keys.toList();
   }
 
-  List<String> GetFriendCodes() {
-    return friendList == null ? null : friendList.values.toList();
+  Map<String,String> GetFriendCodes(FriendListType type) {
+    switch(type)
+    {
+      case FriendListType.FullFriends:
+        return friendList;
+        break;
+      case FriendListType.FriendRequests:
+        return friendRequests;
+        break;
+      case FriendListType.FriendsPending:
+        return friendsPendingResponse;
+        break;
+    }
+
   }
 
   List<String> GetChallengeCodes() {
@@ -92,6 +102,12 @@ class User
 
 }
 
+enum FriendListType{
+  FullFriends,
+  FriendRequests,
+  FriendsPending
+}
+
 @JsonSerializable()
 class UserMetadata{
   factory UserMetadata.fromJson(Map<String, dynamic> json) => _$UserMetadataFromJson(json);
@@ -99,6 +115,16 @@ class UserMetadata{
 
   UserMetadata();
   UserMetadata.basic(this.email, this.uid);
+  UserMetadata.full(UserMetadata umd){
+    this.userName = umd.userName;
+    this.displayName = umd.displayName;
+    this.email = umd.email;
+    this.uid = umd.uid;
+    this.joinDate = umd.joinDate;
+    this.imgId = umd.imgId;
+    this.img = umd.img;
+    this.imgFile = umd.imgFile;
+  }
 
   String userName;
   String displayName;
@@ -106,6 +132,28 @@ class UserMetadata{
   String uid;
   DateTime joinDate;
   String imgId;
+
+  @JsonKey(ignore: true)
+  Image img;
+  @JsonKey(ignore: true)
+  File imgFile;
+
+  Image GetImage() {
+    if(imgId == null) return Image.asset(Assets.DEFAULT_USER);
+    if(img != null) return img;
+    if(imgFile != null) return Image.file(imgFile);
+    return Image.asset(Assets.BROKEN_LINK);
+  }
+
+}
+
+class UserMetadataWithKey extends UserMetadata{
+  // Unique key identifier, usually null
+  String key;
+
+  UserMetadataWithKey(UserMetadata umd, this.key) : super.full(umd);
+  void SetKey(String key) {this.key = key;}
+  String GetKey() => this.key;
 }
 
 @JsonSerializable()
@@ -518,21 +566,78 @@ class FighterScheme {
 
 @JsonSerializable()
 class Challenge{
+
+
   factory Challenge.fromJson(Map<String, dynamic> json) => _$ChallengeFromJson(json);
   Map<String, dynamic> toJson() => _$ChallengeToJson(this);
+
+  factory Challenge.fromInfo(ChallengeInfo info, String challengeRequestKey) {
+    Challenge c = new Challenge();
+
+    c.player1 = info.challenger.meta;
+    c.player2 = info.challengee;
+    c.player1Username = c.player1.userName;
+    c.player2Username = c.player2.userName;
+
+    c.player1Accepted = true;
+
+    c.schemeId = info.schemeEquipped.schemeID;
+    c.schemeName = info.schemeEquipped.gameName;
+    c.schemeImgId = info.schemeEquipped.iconImgId;
+    c.schemeImg = info.schemeEquipped.iconImg;
+    c.schemeImgFile = info.schemeEquipped.iconImgFile;
+
+    c.challengeId = challengeRequestKey;
+
+    return c;
+  }
 
   Challenge();
 
   // ID information
   String challengeId;
+
+  // Scheme info
   String schemeId;
+  String schemeName;
+  String schemeImgId;
+
+  @JsonKey(ignore: true)
+  Image schemeImg;
+  @JsonKey(ignore: true)
+  File schemeImgFile;
 
   // Competing parties
-  String player1Id;
-  String player2Id;
+  String player1Username;
+  String player2Username;
+
+  @JsonKey(ignore: true)
+  UserMetadata player1;
+  @JsonKey(ignore: true)
+  UserMetadata player2;
+
+  // Whether players are on board or not
+  bool player1Accepted = false;
+  bool player2Accepted = false;
 
   // Challenge status
   static const String STAGE_SELECTION = 'selection';
   static const String STAGE_RECORDING = 'recording';
-  String stage;
+  String status;
+
+  static String getMyOpponent(User user, String player1id, String player2id) {
+    if(player1id == user.meta.userName) return player2id;
+    if(player2id == user.meta.userName) return player1id;
+    return '';
+  }
+
+}
+
+class ChallengeInfo
+{
+  ChallengeInfo(this.challengee, this.challenger, this.schemeEquipped);
+
+  User challenger;
+  UserMetadata challengee;
+  SchemeMetadata schemeEquipped;
 }

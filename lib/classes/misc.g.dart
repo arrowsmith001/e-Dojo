@@ -31,8 +31,7 @@ User _$UserFromJson(Map json) {
     ..challengeRequests = (json['challengeRequests'] as Map)?.map(
       (k, e) => MapEntry(k as String, e as String),
     )
-    ..challengeInProgressId = json['challengeInProgressId'] as String
-    ..imgId = json['imgId'] as String;
+    ..challengeInProgressId = json['challengeInProgressId'] as String;
 }
 
 Map<String, dynamic> _$UserToJson(User instance) {
@@ -52,7 +51,6 @@ Map<String, dynamic> _$UserToJson(User instance) {
   writeNotNull('schemesOwned', instance.schemesOwned);
   writeNotNull('challengeRequests', instance.challengeRequests);
   writeNotNull('challengeInProgressId', instance.challengeInProgressId);
-  writeNotNull('imgId', instance.imgId);
   return val;
 }
 
@@ -268,9 +266,13 @@ Challenge _$ChallengeFromJson(Map json) {
   return Challenge()
     ..challengeId = json['challengeId'] as String
     ..schemeId = json['schemeId'] as String
-    ..player1Id = json['player1Id'] as String
-    ..player2Id = json['player2Id'] as String
-    ..stage = json['stage'] as String;
+    ..schemeName = json['schemeName'] as String
+    ..schemeImgId = json['schemeImgId'] as String
+    ..player1Username = json['player1Username'] as String
+    ..player2Username = json['player2Username'] as String
+    ..player1Accepted = json['player1Accepted'] as bool
+    ..player2Accepted = json['player2Accepted'] as bool
+    ..status = json['status'] as String;
 }
 
 Map<String, dynamic> _$ChallengeToJson(Challenge instance) {
@@ -284,8 +286,12 @@ Map<String, dynamic> _$ChallengeToJson(Challenge instance) {
 
   writeNotNull('challengeId', instance.challengeId);
   writeNotNull('schemeId', instance.schemeId);
-  writeNotNull('player1Id', instance.player1Id);
-  writeNotNull('player2Id', instance.player2Id);
-  writeNotNull('stage', instance.stage);
+  writeNotNull('schemeName', instance.schemeName);
+  writeNotNull('schemeImgId', instance.schemeImgId);
+  writeNotNull('player1Username', instance.player1Username);
+  writeNotNull('player2Username', instance.player2Username);
+  writeNotNull('player1Accepted', instance.player1Accepted);
+  writeNotNull('player2Accepted', instance.player2Accepted);
+  writeNotNull('status', instance.status);
   return val;
 }

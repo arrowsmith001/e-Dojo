@@ -15,6 +15,8 @@ class DataModel {
   /// The signed in identity
   User user;
 
+
+
   /// Sets the user
   void setUser(User user) {
     print('setUser: '+user.toString());
@@ -36,7 +38,9 @@ class DataModel {
   // Scheme 'equipped' by user
   SchemeMetadata schemeEquipped;
 
-  List<UserMetadata> friendsList = [];
+  List<UserMetadataWithKey> friendsList = [];
+  List<UserMetadataWithKey> friendRequests = [];
+  List<UserMetadataWithKey> friendsPending = [];
   List<Challenge> challengesList = [];
 
   /// Tracks state of various pages
@@ -88,17 +92,24 @@ class DataModel {
     return user.schemesOwned.containsKey(schemeId);
   }
 
-  bool hasFriendMeta(String userName) {
-
-    for(UserMetadata umd in friendsList) {if(umd.userName == userName) return true;}
+  bool hasFriendMeta(String userName, FriendListType type) {
+    List<UserMetadataWithKey> list = _GetFriendListFromType(type);
+    if(list.isEmpty) return false;
+    for(UserMetadataWithKey umd in list) {if(umd.userName == userName) return true;}
     return false;
   }
 
-  void AddFriendMeta(UserMetadata userMeta) {
-    this.friendsList.add(userMeta);
+  void AddFriendMeta(UserMetadataWithKey userMetaWithKey, FriendListType type) {
+    List<UserMetadataWithKey> list = _GetFriendListFromType(type);
+    for(UserMetadataWithKey umd in list)
+    {
+      if(umd.userName == userMetaWithKey.userName) return;
+    }
+    list.add(userMetaWithKey);
   }
 
   bool hasChallenge(String code) {
+    if(challengesList.isEmpty) return false;
     for(Challenge ch in challengesList) {if(ch.challengeId == code) return true;}
     return false;
   }
@@ -108,6 +119,41 @@ class DataModel {
     challengesList.add(challenge);
   }
 
+  void RemoveChallenge(String challengeId) {
+    for (Challenge c in challengesList) if (c.challengeId == challengeId) {
+      challengesList.remove(c);
+      return;
+    }
+
+  }
+
+  void RemoveFriendMeta(String username, FriendListType type) {
+
+    List<UserMetadata> list = _GetFriendListFromType(type);
+    for(UserMetadata umd in list)
+    {
+      if(umd.userName == username) {
+        list.remove(umd);
+        return;
+      }
+    }
+
+  }
+
+  List<UserMetadataWithKey> _GetFriendListFromType(FriendListType type) {
+    switch(type)
+    {
+      case FriendListType.FullFriends:
+        return friendsList;
+        break;
+      case FriendListType.FriendRequests:
+        return friendRequests;
+        break;
+      case FriendListType.FriendsPending:
+        return  friendsPending;
+        break;
+    }
+  }
 
 
 }

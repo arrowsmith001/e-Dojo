@@ -6,6 +6,7 @@ import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/bloc/bloc.dart';
 import 'package:edojo/bloc/auth_events.dart';
 import 'package:edojo/classes/misc.dart';
+import 'package:edojo/pages/_challenges.dart';
 import 'package:edojo/pages/_schemes.dart';
 import 'package:edojo/tools/Assets.dart';
 import 'package:edojo/tools/storage.dart';
@@ -61,8 +62,7 @@ abstract class NetworkServices {
       User userAcceptingRequest, String usernameOfRequester);
 
   /// Send somebody a request for a challenge
-  Future<void> SendChallengeRequest(Challenge challenge,
-      User userSendingRequest, String usernameOfRequestee);
+  Future<void> SendChallengeRequest(ChallengeInfo challengeInfo);
 
   /// Accept someones request for a challenge
   Future<void> AcceptChallengeRequest(
@@ -243,14 +243,14 @@ class AllFirebaseNetworkServices extends NetworkServices {
     Map<String, dynamic> updatesMap = {};
     String key = dbRef.push().key;
 
-    updatesMap['users/${requestersName}/friendsPendingResponse/$key'] = null;
-    updatesMap['users/${userAcceptingRequest.meta.userName}/friendRequests/$key'] = null;
+    updatesMap['users/${requestersName}/${User.FRIENDS_PENDING_RESPONSE}/$requestKey'] = null;
+    updatesMap['users/${userAcceptingRequest.meta.userName}/${User.FRIEND_REQUESTS}/$requestKey'] = null;
 
-    updatesMap['users/${requestersName}/friends/$key'] = userAcceptingRequest.meta.userName;
-    updatesMap['users/${userAcceptingRequest.meta.userName}/friends/$key'] = requestersName;
+    updatesMap['users/${requestersName}/${User.FRIEND_LIST}/$key'] = userAcceptingRequest.meta.userName;
+    updatesMap['users/${userAcceptingRequest.meta.userName}/${User.FRIEND_LIST}/$key'] = requestersName;
 
     try {
-      dbRef.update(updatesMap);
+      await dbRef.update(updatesMap);
     } catch (e, s) {
       print('$e $s');
       rethrow;
@@ -259,19 +259,18 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
   /// Send somebody a request for a challenge
   @override
-  Future<void> SendChallengeRequest(
-      Challenge challenge,
-      User userSendingRequest, String usernameOfRequestee) async {
+  Future<void> SendChallengeRequest(ChallengeInfo info) async {
 
     // TODO Code to send a challenge (adding it to RTD), have challenge appear on challenges pending response, for self as well as other participant
 
     String challengeRequestKey = dbRef.push().key;
+    Challenge challenge = Challenge.fromInfo(info, challengeRequestKey);
 
     Map<String,dynamic> updates = {};
 
     updates.addAll({'challenges/$challengeRequestKey' : challenge.toJson()});
-    updates.addAll({userSendingRequest.meta.userName + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
-    updates.addAll({usernameOfRequestee + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
+    updates.addAll({'users/' + challenge.player1.userName + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
+    updates.addAll({'users/' + challenge.player2.userName + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
 
     await dbRef.update(updates);
   }
@@ -438,7 +437,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
     DataSnapshot snap;
 
     try {
-      snap = await dbRef.child('users/$userName/uid').once();
+      snap = await dbRef.child('users/$userName/meta/uid').once();
     } catch (e, s) {
       print('$e $s');
       rethrow;
@@ -517,33 +516,41 @@ class AllFirebaseNetworkServices extends NetworkServices {
   // LISTENERS
   void _SetListeners(User user) {
 
+    // TODO Remove listeners when finished
+
     // FRIENDS
     dbRef.child('users/${user.meta.userName}/${User.FRIEND_REQUESTS}').onChildAdded.listen((event) { _HandleFriendRequestsChange(event, Ops.add); });
     dbRef.child('users/${user.meta.userName}/${User.FRIEND_LIST}').onChildAdded.listen((event) { _HandleFriendListChange(event, Ops.add); });
-    dbRef.child('users/${user.meta.userName}/${User.FRIENDS_PENDING_RESPONSE}').onChildAdded.listen((event) { _HandleFriendListChange(event, Ops.add); });
+    dbRef.child('users/${user.meta.userName}/${User.FRIENDS_PENDING_RESPONSE}').onChildAdded.listen((event) { _HandleFriendsPendingChange(event, Ops.add); });
 
     dbRef.child('users/${user.meta.userName}/${User.FRIEND_REQUESTS}').onChildRemoved.listen((event) { _HandleFriendRequestsChange(event, Ops.remove); });
     dbRef.child('users/${user.meta.userName}/${User.FRIEND_LIST}').onChildRemoved.listen((event) { _HandleFriendListChange(event, Ops.remove); });
-    dbRef.child('users/${user.meta.userName}/${User.FRIENDS_PENDING_RESPONSE}').onChildRemoved.listen((event) { _HandleFriendListChange(event, Ops.remove); });
-
+    dbRef.child('users/${user.meta.userName}/${User.FRIENDS_PENDING_RESPONSE}').onChildRemoved.listen((event) { _HandleFriendsPendingChange(event, Ops.remove); });
 
     // CHALLENGES
-    dbRef.child('users/${user.meta.userName}/${User.CHALLENGE_REQUESTS}').onChildAdded.listen((event) { _HandleFriendRequestsChange(event, Ops.add); });
-
-    dbRef.child('users/${user.meta.userName}/${User.CHALLENGE_REQUESTS}').onChildRemoved.listen((event) { _HandleFriendRequestsChange(event, Ops.remove); });
-
-  }
-
-  void _HandleFriendRequestsChange(Event event, Ops op) {
-    print('_HandleFriendRequestsChange called: event: ${event.snapshot.toString()}, op: ${op.toString()}');
-
+    dbRef.child('users/${user.meta.userName}/${User.CHALLENGE_REQUESTS}').onChildAdded.listen((event) { _HandleChallengeRequestsChange(event, Ops.add); });
+    dbRef.child('users/${user.meta.userName}/${User.CHALLENGE_REQUESTS}').onChildRemoved.listen((event) { _HandleChallengeRequestsChange(event, Ops.remove); });
 
   }
 
   void _HandleFriendListChange(Event event, Ops op) {
     print('_HandleFriendListChange called: event: ${event.snapshot.toString()}, op: ${op.toString()}');
+    appStateEventSink.add(FriendListChange(event.snapshot, op, FriendListType.FullFriends));
+  }
 
+  void _HandleFriendRequestsChange(Event event, Ops op) {
+    print('_HandleFriendRequestsChange called: event: ${event.snapshot.toString()}, op: ${op.toString()}');
+    appStateEventSink.add(FriendListChange(event.snapshot, op, FriendListType.FriendRequests));
+  }
 
+  void _HandleFriendsPendingChange(Event event, Ops op) {
+    print('_HandleFriendRequestsChange called: event: ${event.snapshot.toString()}, op: ${op.toString()}');
+    appStateEventSink.add(FriendListChange(event.snapshot, op, FriendListType.FriendsPending));
+  }
+
+  void _HandleChallengeRequestsChange(Event event, Ops op){
+    print('_HandleChallengeRequestsChange called: event: ${event.snapshot.value.toString()}, op: ${op.toString()}');
+    appStateEventSink.add(ChallengeRequestChange(event.snapshot, op));
   }
 
   void _RemoveListeners(User user)
@@ -739,7 +746,10 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
   @override
   Future<UserMetadata> GetUserMeta(String userName) async {
-    DataSnapshot snap = await dbRef.child('users').child('userName').child('meta').once();
+
+    DataSnapshot snap = await dbRef.child('users').child(userName).child('meta').once();
+    if(snap == null || snap.value == null) return null;
+
     UserMetadata userMeta = UserMetadata.fromJson(Map<String,dynamic>.from(snap.value));
     return userMeta;
   }
@@ -747,7 +757,20 @@ class AllFirebaseNetworkServices extends NetworkServices {
   @override
   Future<Challenge> GetChallengeFromCode(String code) async {
     DataSnapshot snap = await dbRef.child('challenges/$code').once();
-    return Challenge.fromJson(Map<String,dynamic>.from(snap.value));
+    Challenge ch = Challenge.fromJson(Map<String,dynamic>.from(snap.value));
+
+    // Get scheme elements
+    File schemeIcon = await GetNetworkImage(ch.schemeImgId);
+    Image schemeImg = Image.file(schemeIcon);
+
+    ch.schemeImgFile = schemeIcon;
+    ch.schemeImg = schemeImg;
+
+    // Get user elements TODO Optimise
+    ch.player1 = await GetUserMeta(ch.player1Username);
+    ch.player2 = await GetUserMeta(ch.player2Username);
+
+    return ch;
   }
 
 
@@ -756,8 +779,14 @@ class AllFirebaseNetworkServices extends NetworkServices {
 }
 
 
+
+
+
+
 enum Ops{
   add, remove
 }
+
+
 
 

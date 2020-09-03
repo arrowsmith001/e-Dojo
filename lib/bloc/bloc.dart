@@ -3,6 +3,7 @@ import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/classes/data_model.dart';
 import 'package:edojo/classes/misc.dart';
 import 'package:edojo/tools/network.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 import 'appstate_states.dart';
 import 'auth_events.dart';
@@ -241,27 +242,15 @@ class DataBloc extends Bloc {
 
       if(event is RefreshFriendCodesAndChallengeCodes)
         {
-          if(model.user.GetFriendCodes() != null)
-          {
-            for(String userName in model.user.GetFriendCodes())
-            {
-              if(!model.hasFriendMeta(userName))
-              {
-                UserMetadata userMeta = await NetworkServiceProvider.instance.netService.GetUserMeta(userName);
-                model.AddFriendMeta(userMeta);
-              }
-            }
+          List<Future> futures = [];
+
+          for(FriendListType type in FriendListType.values){
+            futures.add(refreshFriendCodes(type));
           }
 
-          if(model.user.GetChallengeCodes() != null) {
-            for (String code in model.user.GetChallengeCodes()) {
-              if (!model.hasChallenge(code)) {
-                Challenge challenge = await NetworkServiceProvider
-                    .instance.netService.GetChallengeFromCode(code);
-                model.AddChallenge(challenge);
-              }
-            }
-          }
+          futures.add(refreshChallengeCodes());
+
+          await Future.wait(futures);
 
           _appStateSink.add(AppStateState(model));
         }
@@ -272,6 +261,88 @@ class DataBloc extends Bloc {
 
           _appStateSink.add(AppStateState(model));
         }
+
+      if(event is SubmitSearchForUserEvent)
+        {
+          _appStateSink.add(SearchingForUserState(model));
+
+          // await GetUserMeta... TODO
+          UserMetadata umd = await NetworkServiceProvider
+              .instance.netService.GetUserMeta(event.userToSearch);
+
+          _appStateSink.add(FinishedSearchForUserState(model, umd));
+        }
+
+      if(event is ChallengeUserEvent)
+      {
+        if(event.challengeInfo.schemeEquipped == null) return;
+        // TODO Send failure event
+
+        await NetworkServiceProvider.instance.netService.SendChallengeRequest(event.challengeInfo);
+      }
+
+      if(event is ChallengeRequestChange)
+      {
+        if(event.snap == null || event.snap.value == null)
+        {
+          print('event.snap.value is NULL');
+          return;
+        }
+
+        print("NEW CHALLENGE " + event.op.toString() + ' k: ' + event.snap.key.toString() + ' v: ' + event.snap.value.toString());
+        // TODO Process change and refresh list, send state back to UI
+
+        String challengeId = event.snap.key;
+        Challenge challenge = await NetworkServiceProvider.instance.netService.GetChallengeFromCode(challengeId);
+
+        // Map<String, dynamic> json = Map<String, dynamic>.from(event.snap.value);
+        // Challenge challenge = Challenge.fromJson(json);
+
+        if(event.op == Ops.add) {
+          if(!model.hasChallenge(challenge.challengeId)) model.AddChallenge(challenge);
+        }
+        if(event.op == Ops.remove) {
+          if(model.hasChallenge(challenge.challengeId)) model.RemoveChallenge(challenge.challengeId);
+        }
+
+        _appStateSink.add(RefreshChallengeList(model, challenge, event.op));
+
+      }
+
+      if(event is FriendListChange)
+      {
+        if(event.snap == null || event.snap.value == null) return;
+
+        print("NEW " + event.type.toString() + event.op.toString() + ' k: ' + event.snap.key.toString() + ' v: ' + event.snap.value.toString());
+        // TODO Process change and refresh list, send state back to UI
+
+        String friendId = event.snap.value;
+        UserMetadata umd = await NetworkServiceProvider.instance.netService.GetUserMeta(friendId);
+        UserMetadataWithKey umdwk = new UserMetadataWithKey(umd, event.snap.key);
+
+        if(event.op == Ops.add) {
+          if(!model.hasFriendMeta(friendId, event.type)) model.AddFriendMeta(umdwk, event.type);
+        }
+        if(event.op == Ops.remove) {
+          if(model.hasFriendMeta(friendId, event.type)) model.RemoveFriendMeta(umdwk.userName, event.type);
+        }
+
+        _appStateSink.add(RefreshFriendsList(model, umdwk, event.op, event.type));
+
+      }
+
+      if(event is FriendRequestEvent)
+      {
+        // Inserts pointers into friendsPendingAcceptance and friendsRequests TODO
+        await NetworkServiceProvider.instance.netService.SendFriendRequest(event.userMe, event.umd.userName);
+      }
+
+      if(event is ViewProfileEvent)
+      {
+        // Takes to full profile TODO
+      }
+
+
     }
   }
 
@@ -282,7 +353,40 @@ class DataBloc extends Bloc {
     authEventController.close();
   }
 
+  Future<void> refreshFriendCodes(FriendListType type) async {
+    Map<String,String> map = model.user.GetFriendCodes(type);
+    if(map != null)
+    {
+      for(String key in map.keys)
+      {
+        String userName = map[key];
+        if(!model.hasFriendMeta(userName, type))
+        {
+          UserMetadata userMeta = await NetworkServiceProvider.instance.netService.GetUserMeta(userName);
+          UserMetadataWithKey umdwk = new UserMetadataWithKey(userMeta, key);
+          model.AddFriendMeta(umdwk, type);
+        }
+      }
+    }
+  }
+
+  Future<void> refreshChallengeCodes() async {
+    if(model.user.GetChallengeCodes() != null) {
+      for (String code in model.user.GetChallengeCodes()) {
+        if (!model.hasChallenge(code)) {
+          Challenge challenge = await NetworkServiceProvider
+              .instance.netService.GetChallengeFromCode(code);
+          model.AddChallenge(challenge);
+        }
+      }
+    }
+  }
+
 }
+
+
+
+
 
 
 

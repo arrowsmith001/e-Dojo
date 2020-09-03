@@ -34,6 +34,21 @@ extension WidgetModifier on Widget {
     );
   }
 
+  Widget SIZED({double width, double height}){
+    return SizedBox(
+        width: width,
+        height: height,
+        child : this
+    );
+  }
+
+  Widget FITTED(BoxFit fit){
+    return FittedBox(
+        fit: fit,
+        child : this
+    );
+  }
+
   Widget MY_BACKGROUND_CONTAINER()
   {
     return Container(

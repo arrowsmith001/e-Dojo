@@ -72,6 +72,8 @@ flutter:
     - assets/images/home_fists.png
     - assets/images/home_fighter.png
     - assets/images/home_data.png
+    - assets/images/add_icon.png
+    - assets/images/arrow_icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.

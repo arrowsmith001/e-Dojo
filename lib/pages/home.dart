@@ -81,6 +81,15 @@ class _HomeDefaultState extends State<HomeDefault> {
                 title: Text(
                     'Welcome ${ds.data.user.meta.displayName}',
                     style: TextStyle(color: Colors.white, fontSize: 20)),
+                actions: [
+                  FlatButton(
+                    onPressed: () {
+                      net.SignOut();
+                    },
+                  child: Text('Sign out', style: TextStyle(color: Colors.white),),
+
+                  )
+                ],
 //                startColor: Color.fromRGBO(3, 5, 9, 1.0),
 //                endColor: Color.fromRGBO(32, 56, 100, 1.0),
               ),

@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:edojo/bloc/bloc.dart';
 import 'package:edojo/classes/data_model.dart';
 import 'package:edojo/classes/misc.dart';
+import 'package:edojo/pages/_challenges.dart';
 import 'package:edojo/pages/_schemes.dart';
+import 'package:edojo/tools/network.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class AppStateEvent extends BlocEvent{}
 
@@ -89,4 +92,42 @@ class SchemeDownloaded extends AppStateEvent {
 class ChangeSchemeEquipped extends AppStateEvent {
   ChangeSchemeEquipped(this.smd);
   SchemeMetadata smd;
+}
+
+class SubmitSearchForUserEvent extends AppStateEvent {
+  SubmitSearchForUserEvent(this.userToSearch);
+  String userToSearch;
+}
+
+class ChallengeUserEvent extends AppStateEvent{
+  ChallengeUserEvent(this.challengeInfo);
+  ChallengeInfo challengeInfo;
+}
+
+
+class FriendRequestEvent extends AppStateEvent{
+  FriendRequestEvent(this.umd, this.userMe);
+  UserMetadata umd;
+  User userMe;
+}
+
+class ViewProfileEvent extends AppStateEvent {
+  ViewProfileEvent(this.umd);
+  UserMetadata umd;
+}
+
+
+// Firebase callbacks to user changes
+
+class ChallengeRequestChange extends AppStateEvent{
+  DataSnapshot snap;
+  Ops op;
+  ChallengeRequestChange(this.snap, this.op);
+}
+
+class FriendListChange extends AppStateEvent{
+  DataSnapshot snap;
+  Ops op;
+  FriendListType type;
+  FriendListChange(this.snap, this.op, this.type);
 }
