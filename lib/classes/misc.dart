@@ -500,9 +500,9 @@ class Square{
   Square.empty();
   Square(this.fighter);
 
-  Image GetImage()
+  Image GetImage(double opacityIfBlank)
   {
-    return fighter != null ? fighter.GetFighterImage() : Image.asset(Assets.DEFAULT_SQUARE, color: Color.fromRGBO(0, 0, 0, 0.3),);
+    return fighter != null ? fighter.GetFighterImage() : Image.asset(Assets.DEFAULT_SQUARE, color: Color.fromRGBO(0, 0, 0, opacityIfBlank),);
   }
 
 
@@ -567,32 +567,57 @@ class FighterScheme {
 @JsonSerializable()
 class Challenge{
 
-
   factory Challenge.fromJson(Map<String, dynamic> json) => _$ChallengeFromJson(json);
   Map<String, dynamic> toJson() => _$ChallengeToJson(this);
 
   factory Challenge.fromInfo(ChallengeInfo info, String challengeRequestKey) {
     Challenge c = new Challenge();
 
-    c.player1 = info.challenger.meta;
-    c.player2 = info.challengee;
-    c.player1Username = c.player1.userName;
-    c.player2Username = c.player2.userName;
+    c.meta.player1 = info.challenger.meta;
+    c.meta.player2 = info.challengee;
+    c.meta.player1Username = c.meta.player1.userName;
+    c.meta.player2Username = c.meta.player2.userName;
 
-    c.player1Accepted = true;
+    c.meta.player1Present = false;
+    c.meta.player2Present = false;
 
-    c.schemeId = info.schemeEquipped.schemeID;
-    c.schemeName = info.schemeEquipped.gameName;
-    c.schemeImgId = info.schemeEquipped.iconImgId;
-    c.schemeImg = info.schemeEquipped.iconImg;
-    c.schemeImgFile = info.schemeEquipped.iconImgFile;
+    c.meta.schemeId = info.schemeEquipped.schemeID;
+    c.meta.schemeName = info.schemeEquipped.gameName;
+    c.meta.schemeImgId = info.schemeEquipped.iconImgId;
+    c.meta.schemeImg = info.schemeEquipped.iconImg;
+    c.meta.schemeImgFile = info.schemeEquipped.iconImgFile;
 
-    c.challengeId = challengeRequestKey;
+    c.meta.challengeId = challengeRequestKey;
 
     return c;
   }
 
   Challenge();
+  ChallengeMeta meta = new ChallengeMeta();
+
+  // Non-meta vars
+  GameScheme scheme;
+
+  // Challenge status
+  static const String STAGE_SELECTION = 'selection';
+  static const String STAGE_RECORDING = 'recording';
+  String status;
+
+  static String getMyOpponent(User user, String player1id, String player2id) {
+    if(player1id == user.meta.userName) return player2id;
+    if(player2id == user.meta.userName) return player1id;
+    return '';
+  }
+
+}
+
+@JsonSerializable()
+class ChallengeMeta{
+
+  factory ChallengeMeta.fromJson(Map<String, dynamic> json) => _$ChallengeMetaFromJson(json);
+  Map<String, dynamic> toJson() => _$ChallengeMetaToJson(this);
+
+  ChallengeMeta();
 
   // ID information
   String challengeId;
@@ -616,21 +641,9 @@ class Challenge{
   @JsonKey(ignore: true)
   UserMetadata player2;
 
-  // Whether players are on board or not
-  bool player1Accepted = false;
-  bool player2Accepted = false;
-
-  // Challenge status
-  static const String STAGE_SELECTION = 'selection';
-  static const String STAGE_RECORDING = 'recording';
-  String status;
-
-  static String getMyOpponent(User user, String player1id, String player2id) {
-    if(player1id == user.meta.userName) return player2id;
-    if(player2id == user.meta.userName) return player1id;
-    return '';
-  }
-
+  // Whether players are active or not
+  bool player1Present = false;
+  bool player2Present = false;
 }
 
 class ChallengeInfo

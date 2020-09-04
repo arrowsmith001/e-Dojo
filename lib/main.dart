@@ -213,7 +213,7 @@ class SignInPage extends StatelessWidget {
                             validators: [
                               FormBuilderValidators.required(errorText:'Required field')
                             ]
-                        ).padding(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                        ).PADDING(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
 
                         FormBuilderTextField(
                           obscureText: true,
@@ -224,7 +224,7 @@ class SignInPage extends StatelessWidget {
                             validators: [
                               FormBuilderValidators.required(errorText:'Required field')
                             ]
-                        ).padding(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                        ).PADDING(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
 
                         RaisedButton(
                           child: Text(loggingIn ? '...' : 'SIGN IN'),
@@ -306,7 +306,7 @@ class SignUpPage extends StatelessWidget {
                             validators: [
                               FormBuilderValidators.required(errorText:'Required field')
                             ]
-                        ).padding(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                        ).PADDING(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
 
                         FormBuilderTextField(
                             obscureText: true,
@@ -317,7 +317,7 @@ class SignUpPage extends StatelessWidget {
                             validators: [
                               FormBuilderValidators.required(errorText:'Required field')
                             ]
-                        ).padding(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                        ).PADDING(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
 
                         FormBuilderTextField(
                             obscureText: true,
@@ -328,7 +328,7 @@ class SignUpPage extends StatelessWidget {
                             validators: [
                               FormBuilderValidators.required(errorText:'Required field')
                             ]
-                        ).padding(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                        ).PADDING(EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
 
                         RaisedButton(
                           child: Text(loggingIn ? '...' : 'SIGN UP'),

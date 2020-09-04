@@ -131,3 +131,8 @@ class FriendListChange extends AppStateEvent{
   FriendListType type;
   FriendListChange(this.snap, this.op, this.type);
 }
+
+class ChallengeChange extends AppStateEvent {
+  DataSnapshot snap;
+  ChallengeChange(this.snap);
+}

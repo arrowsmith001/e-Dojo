@@ -104,12 +104,12 @@ class _HomeDefaultState extends State<HomeDefault> {
                           crossAxisCount: 2,
                           children: <Widget>[
 
-                            BigMainButton(context, image: Image.asset(Assets.FISTS), widget: ChallengesPage(), color: Colors.yellow, title: 'Challenges').padding(EdgeInsets.all(20.0)),
-                            BigMainButton(context,image: Image.asset(Assets.FIGHTER), widget: Empty(), color: Colors.blue, title: 'View Fighter Profile').padding(EdgeInsets.all(20.0)),
-                            BigMainButton(context, image: Image.asset(Assets.GAME),widget: SchemesPage(), color: Colors.purpleAccent, title: 'Manage Schemes').padding(EdgeInsets.all(20.0)),
-                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.orange, title: 'Explore Data').padding(EdgeInsets.all(20.0)),
-                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'General settings').padding(EdgeInsets.all(20.0)),
-                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'Account settings').padding(EdgeInsets.all(20.0)),
+                            BigMainButton(context, image: Image.asset(Assets.FISTS), widget: ChallengesPage(), color: Colors.yellow, title: 'Challenges').PADDING(EdgeInsets.all(20.0)),
+                            BigMainButton(context,image: Image.asset(Assets.FIGHTER), widget: Empty(), color: Colors.blue, title: 'View Fighter Profile').PADDING(EdgeInsets.all(20.0)),
+                            BigMainButton(context, image: Image.asset(Assets.GAME),widget: SchemesPage(), color: Colors.purpleAccent, title: 'Manage Schemes').PADDING(EdgeInsets.all(20.0)),
+                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.orange, title: 'Explore Data').PADDING(EdgeInsets.all(20.0)),
+                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'General settings').PADDING(EdgeInsets.all(20.0)),
+                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'Account settings').PADDING(EdgeInsets.all(20.0)),
 
                           ]),
                     ).EXPANDED()

@@ -1,6 +1,7 @@
 
 import 'dart:io';
 
+import 'package:edojo/classes/misc.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,16 +13,27 @@ class StorageManager{
     GetTempDir();
   }
 
+  Directory appDir;
   Future<Directory> GetTempDir() async {
     if(appDir == null) appDir = await getTemporaryDirectory();
     return appDir;
   }
 
-  Directory appDir;
 
-  Future<void> SaveFileToTemp() {
+  Map<String, GameScheme> cachedSchemes = {};
 
+  void AddGameSchemeToCache(GameScheme downloadedScheme) {
+    if(!cachedSchemes.containsKey(downloadedScheme.meta.schemeID))
+      {
+        cachedSchemes.addAll({downloadedScheme.meta.schemeID : downloadedScheme});
+      }
   }
+
+}
+
+class CachedGameScheme{
+  GameScheme scheme;
+  DateTime downloaded;
 }
 
 Future<File> CacheImageFileForUpload(String folderName, File file) async {

@@ -651,8 +651,8 @@ class _MyAppbarState extends State<MyAppbar> {
                   begin: AlignmentDirectional.topCenter,
                   end: AlignmentDirectional.bottomCenter,
                   colors: [
-                    Color.fromRGBO(3, 5, 9, 1.0),
                     Color.fromRGBO(32, 56, 100, 1.0),
+                    Color.fromRGBO(3, 5, 9, 1.0),
                   ],
                 stops: [
                   0.0,
@@ -661,8 +661,8 @@ class _MyAppbarState extends State<MyAppbar> {
               ),
               border: Border(
                 bottom: BorderSide(
-                  color: Colors.white,
-                  width: 3.0,
+                  color: Colors.blue[200],
+                  width: 0.5,
                   style: BorderStyle.solid,
                 ),
               ),

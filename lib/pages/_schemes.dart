@@ -813,7 +813,7 @@ class _FighterTableFromSchemeState extends State<FighterTableFromScheme> {
             // OPTION 2: Image representation
             Widget imgWidget = FittedBox(
               fit: BoxFit.fill,
-                child: widget.scheme.grid.getSquare(i, j).GetImage()
+                child: widget.scheme.grid.getSquare(i, j).GetImage(0.3)
             );
 
            rowContents.add(
@@ -832,7 +832,7 @@ class _FighterTableFromSchemeState extends State<FighterTableFromScheme> {
                           width: boxDim,
                          height: boxDim,
                           child: (model.schemeEditorState.schemeEditorGridSelection.compare(i, j) ?
-                          imgWidget.BORDER(model.schemeEditorState.swapMode ? Colors.purpleAccent : Colors.yellow, 3.0) : imgWidget).padding(EdgeInsets.all(2))
+                          imgWidget.BORDER(model.schemeEditorState.swapMode ? Colors.purpleAccent : Colors.yellow, 3.0) : imgWidget).PADDING(EdgeInsets.all(2))
                      ),
                    );
                  }

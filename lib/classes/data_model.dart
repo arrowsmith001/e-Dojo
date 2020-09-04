@@ -110,17 +110,17 @@ class DataModel {
 
   bool hasChallenge(String code) {
     if(challengesList.isEmpty) return false;
-    for(Challenge ch in challengesList) {if(ch.challengeId == code) return true;}
+    for(Challenge ch in challengesList) {if(ch.meta.challengeId == code) return true;}
     return false;
   }
 
   void AddChallenge(Challenge challenge) {
-    for(Challenge ch in challengesList) {if(ch.challengeId == challenge.challengeId) return;}
+    for(Challenge ch in challengesList) {if(ch.meta.challengeId == challenge.meta.challengeId) return;}
     challengesList.add(challenge);
   }
 
   void RemoveChallenge(String challengeId) {
-    for (Challenge c in challengesList) if (c.challengeId == challengeId) {
+    for (Challenge c in challengesList) if (c.meta.challengeId == challengeId) {
       challengesList.remove(c);
       return;
     }

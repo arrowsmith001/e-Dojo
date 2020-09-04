@@ -299,14 +299,13 @@ class DataBloc extends Bloc {
         // Challenge challenge = Challenge.fromJson(json);
 
         if(event.op == Ops.add) {
-          if(!model.hasChallenge(challenge.challengeId)) model.AddChallenge(challenge);
+          if(!model.hasChallenge(challenge.meta.challengeId)) model.AddChallenge(challenge);
         }
         if(event.op == Ops.remove) {
-          if(model.hasChallenge(challenge.challengeId)) model.RemoveChallenge(challenge.challengeId);
+          if(model.hasChallenge(challenge.meta.challengeId)) model.RemoveChallenge(challenge.meta.challengeId);
         }
 
         _appStateSink.add(RefreshChallengeList(model, challenge, event.op));
-
       }
 
       if(event is FriendListChange)
@@ -342,7 +341,13 @@ class DataBloc extends Bloc {
         // Takes to full profile TODO
       }
 
+      if(event is ChallengeChange)
+        {
 
+
+
+
+        }
     }
   }
 

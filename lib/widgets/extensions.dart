@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 extension WidgetModifier on Widget {
-  Widget padding([EdgeInsetsGeometry value = const EdgeInsets.all(16)]) {
+  Widget PADDING([EdgeInsetsGeometry value = const EdgeInsets.all(16)]) {
     return Padding(
       padding: value,
       child: this,
@@ -38,13 +38,6 @@ extension WidgetModifier on Widget {
     return SizedBox(
         width: width,
         height: height,
-        child : this
-    );
-  }
-
-  Widget FITTED(BoxFit fit){
-    return FittedBox(
-        fit: fit,
         child : this
     );
   }

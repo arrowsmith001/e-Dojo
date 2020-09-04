@@ -264,18 +264,41 @@ Map<String, dynamic> _$FighterSchemeToJson(FighterScheme instance) {
 
 Challenge _$ChallengeFromJson(Map json) {
   return Challenge()
+    ..meta = json['meta'] == null
+        ? null
+        : ChallengeMeta.fromJson((json['meta'] as Map)?.map(
+            (k, e) => MapEntry(k as String, e),
+          ))
+    ..status = json['status'] as String;
+}
+
+Map<String, dynamic> _$ChallengeToJson(Challenge instance) {
+  final val = <String, dynamic>{};
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('meta', instance.meta?.toJson());
+  writeNotNull('status', instance.status);
+  return val;
+}
+
+ChallengeMeta _$ChallengeMetaFromJson(Map json) {
+  return ChallengeMeta()
     ..challengeId = json['challengeId'] as String
     ..schemeId = json['schemeId'] as String
     ..schemeName = json['schemeName'] as String
     ..schemeImgId = json['schemeImgId'] as String
     ..player1Username = json['player1Username'] as String
     ..player2Username = json['player2Username'] as String
-    ..player1Accepted = json['player1Accepted'] as bool
-    ..player2Accepted = json['player2Accepted'] as bool
-    ..status = json['status'] as String;
+    ..player1Present = json['player1Present'] as bool
+    ..player2Present = json['player2Present'] as bool;
 }
 
-Map<String, dynamic> _$ChallengeToJson(Challenge instance) {
+Map<String, dynamic> _$ChallengeMetaToJson(ChallengeMeta instance) {
   final val = <String, dynamic>{};
 
   void writeNotNull(String key, dynamic value) {
@@ -290,8 +313,7 @@ Map<String, dynamic> _$ChallengeToJson(Challenge instance) {
   writeNotNull('schemeImgId', instance.schemeImgId);
   writeNotNull('player1Username', instance.player1Username);
   writeNotNull('player2Username', instance.player2Username);
-  writeNotNull('player1Accepted', instance.player1Accepted);
-  writeNotNull('player2Accepted', instance.player2Accepted);
-  writeNotNull('status', instance.status);
+  writeNotNull('player1Present', instance.player1Present);
+  writeNotNull('player2Present', instance.player2Present);
   return val;
 }

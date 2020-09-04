@@ -1,3 +1,5 @@
+import 'package:auto_size_text/auto_size_text.dart';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/bloc/appstate_states.dart';
 import 'package:edojo/bloc/bloc.dart';
@@ -11,6 +13,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:edojo/widgets/extensions.dart';
 import 'package:flutter/scheduler.dart';
+import 'dart:math' as Math;
 
 class ChallengesPage extends StatefulWidget {
   @override
@@ -101,6 +104,16 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
     data.appStateEventSink.add(ViewProfileEvent(umd));
   }
 
+  void addFriend(User user, UserMetadataWithKey userDataWithKey) {
+    net.AcceptFriendRequest(user, userDataWithKey.key);
+  }
+
+  void goToChallenge(Challenge ch) {
+
+    Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) { return ChallengePage(ch); }));
+
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -189,7 +202,7 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
                           )
                       )
                     ],
-                  ).padding(EdgeInsets.symmetric(horizontal: 16.0)).EXPANDED()],
+                  ).PADDING(EdgeInsets.symmetric(horizontal: 16.0)).EXPANDED()],
                 ),
               ),
             ),
@@ -214,7 +227,7 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
 
                         challengersList.isEmpty ? Center(
                             child:
-                            Text('You have no pending challenges', style: TextStyle(color: Colors.white),).padding(EdgeInsets.symmetric(vertical: 16, horizontal: 16))
+                            Text('You have no pending challenges', style: TextStyle(color: Colors.white),).PADDING(EdgeInsets.symmetric(vertical: 16, horizontal: 16))
                         )
                             : ListView.builder(
                             shrinkWrap: true,
@@ -223,50 +236,55 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
 
                               Challenge ch = challengersList[i];
 
-                              String schemeName = ch.schemeName;
-                              String p1name = ch.player1Username;
-                              String p2name = ch.player2Username;
+                              String schemeName = ch.meta.schemeName;
+                              String p1name = ch.meta.player1Username;
+                              String p2name = ch.meta.player2Username;
 
-                              Image schemeImg = ch.schemeImg;
+                              Image schemeImg = ch.meta.schemeImg;
 
-                              Image p1Img = ch.player1.GetImage();
-                              Image p2Img = ch.player2.GetImage();
+                              Image p1Img = ch.meta.player1.GetImage();
+                              Image p2Img = ch.meta.player2.GetImage();
 
                               bool isChallenger = p1name == user.meta.userName;
                               String text = isChallenger ? 'You challenged ' + p2name + ' to ' + schemeName
                                   : p1name + ' challenged you to ' + schemeName;
 
+                              // Challenge listing item
                               return Row(
                                 children: [
                                   Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Row(children: [
-                                        p1Img.SIZED(width: 40).padding(EdgeInsets.all(5)),
+                                        p1Img.SIZED(width: 40).PADDING(EdgeInsets.all(5)),
                                         Text('vs'),
-                                        p2Img.SIZED(width: 40).padding(EdgeInsets.all(5)),
+                                        p2Img.SIZED(width: 40).PADDING(EdgeInsets.all(5)),
                                       ],),
-                                      Align(child: schemeImg.SIZED(width: 100).FITTED(BoxFit.fitWidth), alignment: Alignment.centerLeft).padding(EdgeInsets.symmetric(horizontal: 7.5)),
+                                      Align(child: schemeImg.SIZED(width: 100)//.FITTED(BoxFit.fitWidth)
+                                          , alignment: Alignment.centerLeft).PADDING(EdgeInsets.symmetric(horizontal: 7.5)),
                                     ],),
 
                                  Column(
                                    mainAxisAlignment: MainAxisAlignment.center,
                                    children: [
+
                                      Container(child: Text(text,), width: MediaQuery.of(context).size.width - 115),
 
-                                     isChallenger ? RaisedButton(child: Text('REVOKE'), onPressed: (){}, color: Colors.red,)
+                                     isChallenger ?
+                                     Row(children: [
+                                       RaisedButton(child: Text('REVOKE'), onPressed: () {  }, color: Colors.red).PADDING(EdgeInsets.all(10)).EXPANDED(),
+                                       RaisedButton(child: Text('GO'), onPressed: () { goToChallenge(ch); }, color: Colors.green).PADDING(EdgeInsets.all(10)).EXPANDED(),
+                                     ]).SIZED(width: MediaQuery.of(context).size.width - 115)
                                       : Row(children: [
-                                       RaisedButton(child: Text('DECLINE'), onPressed: () {  }, color: Colors.red,).EXPANDED().padding(EdgeInsets.all(10)),
-                                       RaisedButton(child: Text('ACCEPT'), onPressed: () { }, color: Colors.green).EXPANDED().padding(EdgeInsets.all(10)),
-                                     ]).SIZED(width: MediaQuery.of(context).size.width - 115)//.padding(EdgeInsets.all(20)).EXPANDED()
-                                   ],
-                                 )
+                                       RaisedButton(child: Text('DECLINE'), onPressed: () {  }, color: Colors.red).PADDING(EdgeInsets.all(10)).EXPANDED(),
+                                       RaisedButton(child: Text('GO'), onPressed: () { goToChallenge(ch); }, color: Colors.green).PADDING(EdgeInsets.all(10)).EXPANDED(),
+                                     ]).SIZED(width: MediaQuery.of(context).size.width - 115)
 
-                                 // Text(text)
+                                   ],).FLEXIBLE()
                                 ],
-                              ).padding(EdgeInsets.symmetric(vertical: 10));
+                              ).PADDING(EdgeInsets.symmetric(vertical: 10));
 
-                            }).FLEXIBLE(),
+                            }),
 
                         SingleChildScrollView(
                           physics: AlwaysScrollableScrollPhysics(),
@@ -275,7 +293,7 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               friendsList.isEmpty ? Center(child:
-                              Text('You haven\'t added any friends yet', style: TextStyle(color: Colors.white),).padding(EdgeInsets.symmetric(vertical: 16, horizontal: 16)))
+                              Text('You haven\'t added any friends yet', style: TextStyle(color: Colors.white),).PADDING(EdgeInsets.symmetric(vertical: 16, horizontal: 16)))
                                   : ListView.builder(
                                   physics: NeverScrollableScrollPhysics(),
                                   shrinkWrap: true,
@@ -296,7 +314,7 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Row(children: [
-                                    Align(child: Text('Friend Requests', style: TextStyle(color: Colors.yellow, fontStyle: FontStyle.italic),).padding(EdgeInsets.symmetric(horizontal: 16, vertical: 0)), alignment: Alignment.centerLeft,).EXPANDED(),
+                                    Align(child: Text('Friend Requests', style: TextStyle(color: Colors.yellow, fontStyle: FontStyle.italic),).PADDING(EdgeInsets.symmetric(horizontal: 16, vertical: 0)), alignment: Alignment.centerLeft,).EXPANDED(),
                                   ],),
                                   ListView.builder(
                                     physics: NeverScrollableScrollPhysics(),
@@ -330,7 +348,7 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Row(children: [
-                                    Align(child: Text('Pending Response', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),).padding(EdgeInsets.symmetric(horizontal: 16, vertical: 0)), alignment: Alignment.centerLeft,).EXPANDED(),
+                                    Align(child: Text('Pending Response', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),).PADDING(EdgeInsets.symmetric(horizontal: 16, vertical: 0)), alignment: Alignment.centerLeft,).EXPANDED(),
                                   ],),
                                   ListView.builder(
                                       physics: NeverScrollableScrollPhysics(),
@@ -404,11 +422,358 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
 
   }
 
-  void addFriend(User user, UserMetadataWithKey userDataWithKey) {
-    net.AcceptFriendRequest(user, userDataWithKey.key);
-  }
+
 }
 
+class ChallengePage extends StatefulWidget {
+  ChallengePage(this.ch);
+
+  final Challenge ch;
+
+  @override
+  _ChallengePageState createState() => _ChallengePageState();
+}
+
+class _ChallengePageState extends State<ChallengePage> with TickerProviderStateMixin {
+
+  final DataBloc data = BlocProvider.instance.dataBloc;
+  final NetworkServices net = NetworkServiceProvider.instance.netService;
+
+  GameScheme scheme;
+
+  AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animController = AnimationController(vsync: this, duration: Duration(milliseconds: 300));
+
+    // Listen for challenges, fetch scheme itself
+    net.SetChallengeListener(widget.ch.meta.challengeId, true);
+    GetGameScheme();
+  }
+
+  void GetGameScheme() async{
+    scheme = await net.GetSchemeFromCode(widget.ch.meta.schemeId);
+    setState(() { });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+
+    // Stop listening to challenges
+    net.SetChallengeListener(widget.ch.meta.challengeId, false);
+
+    _animController.dispose();
+  }
+
+  void togglePlayerSelect() {
+
+  setState(() {
+    //showingFighterSelect = !showingFighterSelect;
+
+    if(!animForward) { _animController.reverse();  }
+    else {  _animController.forward(); }
+
+    animForward = !animForward;
+  });
+  }
+
+  bool animForward = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AppStateState>(
+        stream: data.appStateStream,
+        initialData: AppStateState(data.model),
+    builder: (context, snapshot) {
+
+
+      DataModel dm = snapshot.data.model;
+      Image schemeImg = widget.ch.meta.schemeImg;
+
+      return scheme == null ? CircularProgressIndicator()
+       : SafeArea(
+        child: Scaffold(
+         appBar: MyAppbar(
+           title:
+           schemeImg.image == null ? Text(widget.ch.meta.schemeName, style: TextStyle(color: Colors.white),)
+            : Image(image: schemeImg.image, fit: BoxFit.fitHeight, height: 45),
+           actions: [
+            // FlatButton(onPressed: () { togglePlayerSelect(); }, child: Text('toggle'),)
+           ],
+         ),
+
+         body: Stack(
+           children: [
+             // STACK ELEMENT 1: BASE PAGE
+             Column(
+               children: [
+                 Align(
+                     alignment: Alignment.topCenter,
+                     child:  Row(
+                         children: [
+
+                           Column(
+                               children: [
+
+                                 Text(widget.ch.meta.player1Username).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6)).FLEXIBLE(),
+
+                                 ListView.builder(
+                                     itemCount: 3,
+                                     itemBuilder: (context, i){
+                                       return FighterEntry(this).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6));
+
+                                     }).FLEXIBLE(),
+                               ]
+                           ).EXPANDED(),
+
+                           Column(
+                               children: [
+
+                                 Text(widget.ch.meta.player2Username).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6)).FLEXIBLE(),
+
+                                 ListView.builder(
+                                     itemCount: 3,
+                                     itemBuilder: (context, i){
+                                       return FighterEntry(this).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6));
+
+                                     }).FLEXIBLE(),
+                               ]
+                           ).EXPANDED(),
+
+                         ]
+                     )
+
+                 ).MY_BACKGROUND_CONTAINER().EXPANDED(),
+               ],
+             ),
+
+             // STACK ELEMENT 2: Fighter select FighterSelectTableFromScheme(scheme)
+             //!showingFighterSelect ? Empty()
+               AnimatedBuilder(
+               animation: _animController,
+               builder:(context, child){
+                 double val = Math.pow( _animController.value, 3);
+                 return Opacity(
+                   opacity: val,
+                   child: Transform.translate(
+                       offset: Offset(0, (1-val)*200),
+                       child: Column(
+                         children: [
+                           Empty().EXPANDED(),
+                           Container(
+                             child: Align(child: FighterSelectTableFromScheme(scheme, (MediaQuery.of(context).size.width - 10) / (scheme.grid.dim.maxCol + 1)), alignment: Alignment.center,).PADDING(EdgeInsets.all(5)),
+                             decoration: BoxDecoration(
+                                 // borderRadius: BorderRadius.circular(20),
+                                 // color: Colors.indigo,
+                                 border: Border(
+                                   top: BorderSide(
+                                     color: Colors.white,
+                                     width: 2,
+                                     style: BorderStyle.solid,
+                                   ),
+                                 )
+                             ),).EXPANDED()
+
+                         ],
+                       )),
+
+                 );
+               }
+             ),
+
+           ],
+         )
+
+      )
+      );
+
+
+
+
+    }
+    );
+  }
+
+
+}
+
+class FighterEntry extends StatelessWidget{
+
+  FighterEntry(this.parentState);
+  _ChallengePageState parentState;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+        onTap: (){ parentState.togglePlayerSelect(); }, // TODO Touching selects field for entry (if on player side)
+          child: DottedBorder(
+            color: Colors.white,
+            strokeWidth: 2,
+            dashPattern: [
+              4
+            ],
+            borderType: BorderType.RRect,
+            radius: Radius.circular(5),
+              child: Text('ENTER YOUR FIGHTER').PADDING(EdgeInsets.symmetric(horizontal: 5, vertical: 16)),
+          ),
+        );
+  }
+
+}
+
+class FighterSelectTableFromScheme extends StatefulWidget {
+
+  FighterSelectTableFromScheme(this.scheme, this.initDim);
+  GameScheme scheme;
+  double initDim;
+
+  @override
+  _FighterSelectTableFromScheme createState() => _FighterSelectTableFromScheme(initDim);
+}
+
+class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> {
+  final DataBloc data = BlocProvider.instance.dataBloc;
+  final NetworkServices net = NetworkServiceProvider.instance.netService;
+
+  final _scrollController = new ScrollController(keepScrollOffset: false);
+  final _scrollController2 = new ScrollController(keepScrollOffset: false);
+
+
+  List<TableRow> tableRows;
+
+  double boxDim;
+  double localScale = 1;
+  double boxDimTemp;
+
+  _FighterSelectTableFromScheme(double initDim){
+    this.boxDim = initDim;
+    this.boxDimTemp = initDim;
+  }
+
+  void ChangeDim(double newDim, bool set)
+  {
+    setState(() {
+      if(set) {
+        boxDim = newDim;
+        boxDimTemp = newDim;
+      }
+      else boxDim = boxDimTemp*localScale;
+    });
+  }
+
+  void HandleTap(int i, int j) {
+    // TODO Touching enters fighter for selected fighter entry, and moves selection on
+  }
+
+  void HandleLongPress(int i, int j) {
+
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    int rows = widget.scheme.grid.dim.maxRow;
+    int cols = widget.scheme.grid.dim.maxCol;
+
+    tableRows = new List();
+
+    for(int i = 0; i <= rows; i++)
+    {
+      List<Widget> rowContents = [];
+
+      for(int j = 0; j <= cols; j++)
+      {
+        // OPTION 1: Text representation
+        Widget textWidget = FittedBox(
+            fit: BoxFit.fitHeight,
+            child: AutoSizeText(widget.scheme.grid.getSquare(i, j).GetName())
+        );
+
+        // OPTION 2: Image representation
+        Widget imgWidget = FittedBox(
+            fit: BoxFit.fill,
+            child: widget.scheme.grid.getSquare(i, j).GetImage(1)
+        );
+
+        rowContents.add(
+            StreamBuilder<AppStateState>(
+                initialData: AppStateState(data.model),
+                stream: data.appStateStream,
+                builder: (context, snapshot) {
+
+                  DataModel model = snapshot.data.model;
+
+                  return GestureDetector(
+                    onLongPress: () {HandleLongPress(i, j);},
+                    onTap: () { HandleTap(i, j); },
+                    child:
+                    SizedBox(
+                        width: boxDim,
+                        height: boxDim,
+                       // child: (model.schemeEditorState.schemeEditorGridSelection.compare(i, j) ?
+                       // imgWidget.BORDER(model.schemeEditorState.swapMode ? Colors.purpleAccent : Colors.yellow, 3.0) : imgWidget).PADDING(EdgeInsets.all(2))
+                      child: imgWidget.PADDING(EdgeInsets.all(2)),
+                    ),
+                  );
+                }
+            )
+        );
+      }
+      tableRows.add(new TableRow(
+          children: rowContents
+      ));
+    }
+
+
+    return
+      FutureBuilder<Image>(
+        builder: (context,snapshot) {
+
+          return GestureDetector(
+            onScaleUpdate: (details){
+              localScale = details.scale;
+              ChangeDim(localScale * boxDimTemp, false);
+            },
+            onScaleEnd: (details) {
+              ChangeDim(localScale * boxDimTemp, true);
+              localScale = 1;
+            },
+            child: Scrollbar(
+                controller: _scrollController2,
+                child: ListView(
+                    children: <Widget>[
+                      SingleChildScrollView(
+                          physics: AlwaysScrollableScrollPhysics(),
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          child:
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Center(child:
+
+                              Container(
+                                child: Table(
+                                  //border: TableBorder.all(color: Colors.red),
+                                    defaultColumnWidth: IntrinsicColumnWidth(),
+                                    children: tableRows
+                                ),
+                              )
+
+                              ),
+                            ],
+                          )
+                      )
+                    ])),
+          );
+        },
+      );
+  }
+}
 
 
 

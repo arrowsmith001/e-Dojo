@@ -99,6 +99,8 @@ abstract class NetworkServices {
 
   Future<Challenge> GetChallengeFromCode(String code);
 
+  void SetChallengeListener(String code, bool add);
+
 }
 
 // TODO Make a network service that's solely (local) SQL
@@ -269,8 +271,8 @@ class AllFirebaseNetworkServices extends NetworkServices {
     Map<String,dynamic> updates = {};
 
     updates.addAll({'challenges/$challengeRequestKey' : challenge.toJson()});
-    updates.addAll({'users/' + challenge.player1.userName + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
-    updates.addAll({'users/' + challenge.player2.userName + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
+    updates.addAll({'users/' + challenge.meta.player1.userName + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
+    updates.addAll({'users/' + challenge.meta.player2.userName + '/' + User.CHALLENGE_REQUESTS + '/' + challengeRequestKey : ''});
 
     await dbRef.update(updates);
   }
@@ -343,6 +345,11 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
     print('GetSchemeFromCode');
 
+    if(StorageManager.instance.cachedSchemes.containsKey(code))
+      {
+        return StorageManager.instance.cachedSchemes[code];
+      }
+
       DataSnapshot snap = await dbRef.child('schemes/$code').once();
 
       Map<String,dynamic> map = Map<String,dynamic>.from(snap.value);
@@ -370,6 +377,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
           downloadedScheme.meta.iconImg = Image.file(file);
         }
 
+      StorageManager.instance.AddGameSchemeToCache(downloadedScheme);
       return downloadedScheme;
       //appStateEventSink.add(SchemeEditLoadedEvent(downloadedScheme));
 
@@ -551,6 +559,19 @@ class AllFirebaseNetworkServices extends NetworkServices {
   void _HandleChallengeRequestsChange(Event event, Ops op){
     print('_HandleChallengeRequestsChange called: event: ${event.snapshot.value.toString()}, op: ${op.toString()}');
     appStateEventSink.add(ChallengeRequestChange(event.snapshot, op));
+  }
+
+  StreamSubscription challengeListener;
+
+  void SetChallengeListener(String code, bool add){
+    if(add) challengeListener = dbRef.child('challenges/$code').onValue.listen((event) { _HandleChallengeChange(event); });
+    else challengeListener.cancel();
+  }
+
+  void _HandleChallengeChange(Event event) {
+    print('_HandleChallengeRequestsChange called: event: ${event.snapshot.value.toString()}');
+    appStateEventSink.add(ChallengeChange(event.snapshot));
+
   }
 
   void _RemoveListeners(User user)
@@ -760,15 +781,15 @@ class AllFirebaseNetworkServices extends NetworkServices {
     Challenge ch = Challenge.fromJson(Map<String,dynamic>.from(snap.value));
 
     // Get scheme elements
-    File schemeIcon = await GetNetworkImage(ch.schemeImgId);
+    File schemeIcon = await GetNetworkImage(ch.meta.schemeImgId);
     Image schemeImg = Image.file(schemeIcon);
 
-    ch.schemeImgFile = schemeIcon;
-    ch.schemeImg = schemeImg;
+    ch.meta.schemeImgFile = schemeIcon;
+    ch.meta.schemeImg = schemeImg;
 
     // Get user elements TODO Optimise
-    ch.player1 = await GetUserMeta(ch.player1Username);
-    ch.player2 = await GetUserMeta(ch.player2Username);
+    ch.meta.player1 = await GetUserMeta(ch.meta.player1Username);
+    ch.meta.player2 = await GetUserMeta(ch.meta.player2Username);
 
     return ch;
   }
@@ -776,7 +797,11 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
 
 
+
+
 }
+
+
 
 
 
