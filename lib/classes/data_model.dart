@@ -162,6 +162,55 @@ class ChallengeState {
 
   Challenge challengeInProgress;
 
+  void SelectFighter(FighterScheme fighter, int playerNum, int fighterNum) {
+    if(challengeInProgress == null) return;
+
+    challengeInProgress.SelectFighter(fighter,playerNum,fighterNum);
+
+  }
+
+  GameScheme GetScheme() {
+    if(challengeInProgress == null) return null;
+    return challengeInProgress.scheme;
+  }
+
+  FighterScheme GetFighter(int playerNum, int fighterNum) {
+    if(challengeInProgress == null) return null;
+    return challengeInProgress.GetFighter(playerNum, fighterNum);
+
+  }
+
+  Future<void> RefreshChallengeState(ChallengeStatus newState) async {
+    if(challengeInProgress == null) return null;
+
+    for(FighterScheme fs in newState.player1Fighters.values)
+    {
+      fs.SetImage(await NetworkServiceProvider.instance.netService.GetNetworkImage(fs.iconImgId));
+    }
+    for(FighterScheme fs in newState.player2Fighters.values)
+    {
+      fs.SetImage(await NetworkServiceProvider.instance.netService.GetNetworkImage(fs.iconImgId));
+    }
+
+    challengeInProgress.state = newState; // TODO Pick ONLY the stuff that's changed
+
+  }
+
+  void SetScheme(GameScheme scheme) {
+    if(challengeInProgress == null) return null;
+    challengeInProgress.scheme = scheme;
+  }
+
+  int entrySelection;
+  void ChangeEntrySelection(int fighterNum) {
+
+    if(fighterNum == null && entrySelection != null){
+      // TODO Get next blank entry (just increases for now)
+      entrySelection++;
+    }
+    else entrySelection = fighterNum;
+  }
+
 
 
 }

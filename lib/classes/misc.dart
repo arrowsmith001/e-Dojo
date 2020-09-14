@@ -1,4 +1,5 @@
 // MAIN OBJECTS
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -173,6 +174,7 @@ class SchemeMetadata{
   int upvotes = 0;
   int releaseYear;
   String iconImgId;
+  int maxFighters;
 
   @JsonKey(ignore: true)
   Image iconImg;
@@ -224,6 +226,8 @@ class GameScheme
     {
       grid.addColumn();
     }
+
+    this.meta.maxFighters = 3; // TODO Obviously, make this a player selected value
   }
 
   SchemeMetadata meta = new SchemeMetadata();
@@ -235,7 +239,6 @@ class GameScheme
   {
     return meta.GetGameImage();
   }
-
 
   void SetSchemeID(String schemeID) {
     this.meta.schemeID = schemeID;
@@ -586,17 +589,28 @@ class Challenge{
     c.meta.schemeImgId = info.schemeEquipped.iconImgId;
     c.meta.schemeImg = info.schemeEquipped.iconImg;
     c.meta.schemeImgFile = info.schemeEquipped.iconImgFile;
+    c.meta.maxFighters = info.schemeEquipped.maxFighters;
 
     c.meta.challengeId = challengeRequestKey;
+
+    print('SCHEME META: ' + c.meta.toJson().toString());
 
     return c;
   }
 
   Challenge();
+
   ChallengeMeta meta = new ChallengeMeta();
+  ChallengeStatus state = new ChallengeStatus();
 
   // Non-meta vars
   GameScheme scheme;
+
+  // void InitFighters()
+  // {
+  //   state.player1Fighters = new List<FighterScheme>(meta.maxFighters);
+  //   state.player2Fighters = new List<FighterScheme>(meta.maxFighters);
+  // }
 
   // Challenge status
   static const String STAGE_SELECTION = 'selection';
@@ -609,10 +623,92 @@ class Challenge{
     return '';
   }
 
+  FighterScheme GetFighter(int playerNum, int fighterNum) {
+    return state.GetFighter(playerNum, fighterNum);
+  }
+
+  void SelectFighter(FighterScheme fighter, int playerNum, int fighterNum) {
+    state.SelectFighter(fighter, playerNum, fighterNum);
+  }
+
+  Map<String,FighterScheme> GetMyList(int pNum) {
+    switch(pNum)
+    {
+      case 1: return state.player1Fighters;
+      break;
+      case 2: return state.player2Fighters;
+      break;
+    }
+  }
+
+  bool IsMaxChosen(int pNum) {
+    if(GetMyList(pNum) == null) return false;
+    return GetMyList(pNum).length == meta.maxFighters;
+  }
+
+}
+
+@JsonSerializable()
+class ChallengeStatus {
+
+  factory ChallengeStatus.fromJson(Map<String, dynamic> json) => _$ChallengeStatusFromJson(json);
+  Map<String, dynamic> toJson() => _$ChallengeStatusToJson(this);
+
+  ChallengeStatus();
+
+  bool p1In = false;
+  bool p2In = false;
+
+  Map<String, FighterScheme> player1Fighters;
+  Map<String, FighterScheme> player2Fighters;
+
+  void SelectFighter(FighterScheme fighter, int playerNum, int fighterNum) {
+
+    String fighterString = 'i' + fighterNum.toString();
+
+    Map<int, FighterScheme> list;
+    switch(playerNum)
+    {
+      case 1:
+        if(player1Fighters == null) player1Fighters = {fighterString : fighter};
+        // else if(player2Fighters.containsKey(fighterNum)) player2Fighters[fighterNum] = fighter;
+        // else player2Fighters.addAll({fighterNum : fighter});
+        player1Fighters[fighterString] = fighter;
+
+        for(String k in player1Fighters.keys)  {   print(k.toString() + player1Fighters[k].fighterName);  }
+        break;
+      case 2:
+        if(player2Fighters == null) player2Fighters = {fighterString : fighter};
+        // else if(player2Fighters.containsKey(fighterNum)) player2Fighters[fighterNum] = fighter;
+        // else player2Fighters.addAll({fighterNum : fighter});
+        player2Fighters[fighterString] = fighter;
+
+        for(String k in player2Fighters.keys)  {   print(k.toString() + player2Fighters[k].fighterName);  }
+        break;
+    }
+
+
+  }
+
+  FighterScheme GetFighter(int playerNum, int fighterNum) {
+    switch(playerNum)
+    {
+      case 1:
+        if(player1Fighters == null) return null;
+        else return player1Fighters['i' + fighterNum.toString()];
+        break;
+      case 2:
+        if(player2Fighters == null) return null;
+        else return player2Fighters['i' + fighterNum.toString()];
+        break;
+    }
+
+  }
 }
 
 @JsonSerializable()
 class ChallengeMeta{
+
 
   factory ChallengeMeta.fromJson(Map<String, dynamic> json) => _$ChallengeMetaFromJson(json);
   Map<String, dynamic> toJson() => _$ChallengeMetaToJson(this);
@@ -626,6 +722,7 @@ class ChallengeMeta{
   String schemeId;
   String schemeName;
   String schemeImgId;
+  int maxFighters;
 
   @JsonKey(ignore: true)
   Image schemeImg;
@@ -644,11 +741,14 @@ class ChallengeMeta{
   // Whether players are active or not
   bool player1Present = false;
   bool player2Present = false;
+
 }
 
 class ChallengeInfo
 {
-  ChallengeInfo(this.challengee, this.challenger, this.schemeEquipped);
+  ChallengeInfo(this.challengee, this.challenger, this.schemeEquipped){
+    print('challegne info: ' + schemeEquipped.toJson().toString());
+  }
 
   User challenger;
   UserMetadata challengee;

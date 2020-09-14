@@ -7,6 +7,8 @@ import 'package:uuid/uuid.dart';
 
 class StorageManager{
 
+  // TODO Smarter caching
+
   static StorageManager instance = StorageManager._internal();
   factory StorageManager() => instance;
   StorageManager._internal(){
@@ -20,20 +22,57 @@ class StorageManager{
   }
 
 
-  Map<String, GameScheme> cachedSchemes = {};
+  Map<String, File> cachedIcons = {};
+  Map<String, File> cachedDPs = {};
 
-  void AddGameSchemeToCache(GameScheme downloadedScheme) {
-    if(!cachedSchemes.containsKey(downloadedScheme.meta.schemeID))
-      {
-        cachedSchemes.addAll({downloadedScheme.meta.schemeID : downloadedScheme});
-      }
+  Map<String, GameScheme> cachedSchemes = {}; // TODO Put to file
+
+
+  void CacheData(dynamic data, CacheType type) {
+    switch(type)
+    {
+      case CacheType.gameSchemes:
+        data = data as GameScheme;
+        if(!cachedSchemes.containsKey(data.meta.schemeID))
+        {
+          cachedSchemes.addAll({data.meta.schemeID : data});
+        }
+        break;
+
+      case CacheType.icons:
+        data = data as File;
+        String iconId = GetFileName(data);
+        if(!cachedIcons.containsKey(iconId))
+        {
+          cachedSchemes.addAll({iconId : data});
+        }
+        break;
+
+      case CacheType.dps:
+        // TODO: Handle this case.
+        break;
+    }
+
+
+  }
+
+  void ClearCache() {
+    cachedSchemes.clear();
+    cachedIcons.clear();
+    cachedDPs.clear();
+  }
+
+  String GetFileName(File file) {
+    String fileNameWithExt = file.path.split('/').last;
+    String nameOnly = fileNameWithExt.split('.').first;
+    return nameOnly;
   }
 
 }
 
-class CachedGameScheme{
-  GameScheme scheme;
-  DateTime downloaded;
+enum CacheType{
+  icons, dps,
+  gameSchemes,
 }
 
 Future<File> CacheImageFileForUpload(String folderName, File file) async {

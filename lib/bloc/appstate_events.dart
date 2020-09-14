@@ -116,6 +116,31 @@ class ViewProfileEvent extends AppStateEvent {
   UserMetadata umd;
 }
 
+class ChallengeStartedEvent extends AppStateEvent {
+  ChallengeStartedEvent(this.ch, this.scheme);
+  final Challenge ch;
+  final GameScheme scheme;
+}
+class ChallengeEndedEvent extends AppStateEvent {
+  ChallengeEndedEvent(this.ch);
+  final Challenge ch;
+}
+class ChallengeExitedEvent extends AppStateEvent {
+  ChallengeExitedEvent(this.ch);
+  final Challenge ch;
+}
+
+class FighterSelectedEvent extends AppStateEvent {
+  FighterSelectedEvent(this.fighter, this.playerNum, this.fighterNum);
+  final FighterScheme fighter;
+  final int playerNum;
+  final int fighterNum;
+}
+
+class FighterEntrySelectionEvent extends AppStateEvent {
+  FighterEntrySelectionEvent(this.fighterNum);
+  int fighterNum;
+}
 
 // Firebase callbacks to user changes
 
@@ -132,7 +157,12 @@ class FriendListChange extends AppStateEvent{
   FriendListChange(this.snap, this.op, this.type);
 }
 
-class ChallengeChange extends AppStateEvent {
+class ChallengeStateChange extends AppStateEvent {
   DataSnapshot snap;
-  ChallengeChange(this.snap);
+  ChallengeStateChange(this.snap);
+}
+
+// Dev events
+class ClearCacheEvent extends AppStateEvent {
+
 }

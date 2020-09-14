@@ -101,6 +101,8 @@ abstract class NetworkServices {
 
   void SetChallengeListener(String code, bool add);
 
+  Future<void> PushNewChallengeState(String challengeId, ChallengeStatus newState);
+
 }
 
 // TODO Make a network service that's solely (local) SQL
@@ -267,6 +269,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
     String challengeRequestKey = dbRef.push().key;
     Challenge challenge = Challenge.fromInfo(info, challengeRequestKey);
+   // challenge.InitFighters();
 
     Map<String,dynamic> updates = {};
 
@@ -564,13 +567,13 @@ class AllFirebaseNetworkServices extends NetworkServices {
   StreamSubscription challengeListener;
 
   void SetChallengeListener(String code, bool add){
-    if(add) challengeListener = dbRef.child('challenges/$code').onValue.listen((event) { _HandleChallengeChange(event); });
+    if(add) challengeListener = dbRef.child('challenges/$code/state').onValue.listen((event) { _HandleChallengeChange(event); });
     else challengeListener.cancel();
   }
 
   void _HandleChallengeChange(Event event) {
     print('_HandleChallengeRequestsChange called: event: ${event.snapshot.value.toString()}');
-    appStateEventSink.add(ChallengeChange(event.snapshot));
+    appStateEventSink.add(ChallengeStateChange(event.snapshot));
 
   }
 
@@ -778,7 +781,11 @@ class AllFirebaseNetworkServices extends NetworkServices {
   @override
   Future<Challenge> GetChallengeFromCode(String code) async {
     DataSnapshot snap = await dbRef.child('challenges/$code').once();
+
     Challenge ch = Challenge.fromJson(Map<String,dynamic>.from(snap.value));
+    // ch.InitFighters(); // Calls meta.maxFighters and initialises fighter select lists
+
+    print('ch downloaded from code $code: ' + ch.toJson().toString());
 
     // Get scheme elements
     File schemeIcon = await GetNetworkImage(ch.meta.schemeImgId);
@@ -792,6 +799,13 @@ class AllFirebaseNetworkServices extends NetworkServices {
     ch.meta.player2 = await GetUserMeta(ch.meta.player2Username);
 
     return ch;
+  }
+
+  @override
+  Future<void> PushNewChallengeState(String challengeId, ChallengeStatus newState) async {
+
+    await dbRef.child('challenges').child(challengeId).child('state').set(newState.toJson());
+
   }
 
 

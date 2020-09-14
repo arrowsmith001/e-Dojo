@@ -421,9 +421,8 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
           });
 
   }
-
-
 }
+
 
 class ChallengePage extends StatefulWidget {
   ChallengePage(this.ch);
@@ -439,14 +438,13 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
   final DataBloc data = BlocProvider.instance.dataBloc;
   final NetworkServices net = NetworkServiceProvider.instance.netService;
 
-  GameScheme scheme;
-
   AnimationController _animController;
+
+  int selectedFighter;
 
   @override
   void initState() {
     super.initState();
-
     _animController = AnimationController(vsync: this, duration: Duration(milliseconds: 300));
 
     // Listen for challenges, fetch scheme itself
@@ -455,7 +453,10 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
   }
 
   void GetGameScheme() async{
-    scheme = await net.GetSchemeFromCode(widget.ch.meta.schemeId);
+
+    GameScheme scheme = await net.GetSchemeFromCode(widget.ch.meta.schemeId);
+    data.appStateEventSink.add(ChallengeStartedEvent(widget.ch, scheme));
+
     setState(() { });
   }
 
@@ -465,6 +466,9 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
 
     // Stop listening to challenges
     net.SetChallengeListener(widget.ch.meta.challengeId, false);
+
+    // Briefly exited from challenge (not closed)
+    data.appStateEventSink.add(ChallengeExitedEvent(widget.ch));
 
     _animController.dispose();
   }
@@ -481,6 +485,8 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
   });
   }
 
+  // Fighter table controls
+  FighterSelectTableFromScheme fighterTable;
   bool animForward = true;
 
   @override
@@ -490,18 +496,27 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
         initialData: AppStateState(data.model),
     builder: (context, snapshot) {
 
-
       DataModel dm = snapshot.data.model;
+      GameScheme scheme = dm.challengeState.GetScheme();
+
       Image schemeImg = widget.ch.meta.schemeImg;
 
-      return scheme == null ? CircularProgressIndicator()
-       : SafeArea(
+      if(scheme == null || scheme.grid == null) return CircularProgressIndicator();
+
+      fighterTable =
+          FighterSelectTableFromScheme(togglePlayerSelect, scheme, (MediaQuery.of(context).size.width - 10) / (scheme.grid.dim.maxCol + 1));
+
+      bool isP1 = widget.ch.meta.player1.userName == dm.user.meta.userName;
+      bool isP2 = widget.ch.meta.player2.userName == dm.user.meta.userName;
+
+      return SafeArea(
         child: Scaffold(
          appBar: MyAppbar(
            title:
            schemeImg.image == null ? Text(widget.ch.meta.schemeName, style: TextStyle(color: Colors.white),)
             : Image(image: schemeImg.image, fit: BoxFit.fitHeight, height: 45),
            actions: [
+             !animForward ? IconButton(icon: Icon(Icons.clear), onPressed: () { fighterTable.toggleInParent(); }, color: Colors.white) : Empty()
             // FlatButton(onPressed: () { togglePlayerSelect(); }, child: Text('toggle'),)
            ],
          ),
@@ -519,12 +534,13 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
                            Column(
                                children: [
 
-                                 Text(widget.ch.meta.player1Username).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6)).FLEXIBLE(),
+                                 Text(widget.ch.meta.player1.displayName).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6)).FLEXIBLE(),
 
                                  ListView.builder(
-                                     itemCount: 3,
+                                     itemCount: scheme.meta.maxFighters,
                                      itemBuilder: (context, i){
-                                       return FighterEntry(this).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6));
+                                       FighterEntry entry = FighterEntry(this, 1, i, isP1);
+                                       return entry.PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6));
 
                                      }).FLEXIBLE(),
                                ]
@@ -533,12 +549,13 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
                            Column(
                                children: [
 
-                                 Text(widget.ch.meta.player2Username).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6)).FLEXIBLE(),
+                                 Text(widget.ch.meta.player2.displayName).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6)).FLEXIBLE(),
 
                                  ListView.builder(
-                                     itemCount: 3,
+                                     itemCount: scheme.meta.maxFighters,
                                      itemBuilder: (context, i){
-                                       return FighterEntry(this).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6));
+                                       FighterEntry entry = FighterEntry(this, 2, i, isP2);
+                                       return  entry.PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6));
 
                                      }).FLEXIBLE(),
                                ]
@@ -563,9 +580,10 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
                        offset: Offset(0, (1-val)*200),
                        child: Column(
                          children: [
-                           Empty().EXPANDED(),
+                           //Empty().EXPANDED(),
                            Container(
-                             child: Align(child: FighterSelectTableFromScheme(scheme, (MediaQuery.of(context).size.width - 10) / (scheme.grid.dim.maxCol + 1)), alignment: Alignment.center,).PADDING(EdgeInsets.all(5)),
+                             child: Align(
+                               child: fighterTable, alignment: Alignment.center,).PADDING(EdgeInsets.all(5)),
                              decoration: BoxDecoration(
                                  // borderRadius: BorderRadius.circular(20),
                                  // color: Colors.indigo,
@@ -586,50 +604,135 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
              ),
 
            ],
-         )
+         ),
 
       )
       );
-
-
-
-
     }
     );
   }
 
 
+
+
 }
 
-class FighterEntry extends StatelessWidget{
 
-  FighterEntry(this.parentState);
+
+class FighterEntry extends StatefulWidget{
+  FighterEntry(this.parentState, this.playerNum, this.fighterNum, this.isUser );
   _ChallengePageState parentState;
+  final bool isUser;
+  final int playerNum;
+  final int fighterNum;
+
+  @override
+  _FighterEntryState createState() => _FighterEntryState();
+
+}
+
+class _FighterEntryState extends State<FighterEntry> {
+
+  final DataBloc data = BlocProvider.instance.dataBloc;
+  final NetworkServices net = NetworkServiceProvider.instance.netService;
+
+  bool willAccept = false;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-        onTap: (){ parentState.togglePlayerSelect(); }, // TODO Touching selects field for entry (if on player side)
-          child: DottedBorder(
-            color: Colors.white,
-            strokeWidth: 2,
-            dashPattern: [
-              4
-            ],
-            borderType: BorderType.RRect,
-            radius: Radius.circular(5),
-              child: Text('ENTER YOUR FIGHTER').PADDING(EdgeInsets.symmetric(horizontal: 5, vertical: 16)),
+    return StreamBuilder<AppStateState>(
+      stream: data.appStateStream,
+      initialData: AppStateState(data.model),
+      builder: (context, ds) {
+
+        DataModel dm = ds.data.model;
+
+        bool selected = (widget.isUser && widget.fighterNum == dm.challengeState.entrySelection);
+
+        return DragTarget<Square>(
+
+          onWillAccept: (square){
+            setState(() {
+              willAccept = widget.isUser;
+            });
+
+            return widget.isUser;
+          },
+          onAccept: (square){
+            setState(() {
+              willAccept = false;
+            });
+
+            print('fighterSelectedEvent FIRED: ' + square.fighter.fighterName + ' ' + widget.playerNum.toString() + ' ' + widget.fighterNum.toString());
+            data.appStateEventSink.add(FighterSelectedEvent(square.fighter, widget.playerNum, widget.fighterNum));
+
+          },
+          onLeave: (square){
+          setState(() {
+            willAccept = false;
+          });
+          },
+          builder: (context, listOfSquares, listDynamic) =>
+              StreamBuilder<AppStateState>(
+            stream: data.appStateStream,
+            initialData: new AppStateState(data.model),
+            builder: (context, snapshot) {
+
+              double height = 50;
+
+              FighterScheme fighter = snapshot.data.model.challengeState.GetFighter(widget.playerNum, widget.fighterNum);
+
+              Widget text = FittedBox(child: AutoSizeText(fighter == null ? 'ENTER YOUR FIGHTER' : fighter.fighterName, maxLines: 2, maxFontSize: 40, minFontSize: 20, textAlign: TextAlign.center,)
+                  .PADDING(EdgeInsets.symmetric(horizontal: 15, vertical: 20)), fit: BoxFit.fitWidth).SIZED(height: height).EXPANDED();
+              Widget image = fighter == null ? Empty() : FittedBox(fit: BoxFit.fill, child: fighter.GetFighterImage()).SIZED(width: height, height: height);
+
+              return InkWell(
+
+                  onTap: (){
+                    if(!widget.isUser) return;
+                      widget.parentState.togglePlayerSelect();
+                      data.appStateEventSink.add(FighterEntrySelectionEvent(widget.fighterNum));
+                    }, // TODO Touching selects field for entry (if on player side)
+                    child: DottedBorder(
+                      color: !widget.isUser ? Colors.blueGrey : willAccept ? Colors.yellow : Colors.white,
+                      strokeWidth: selected ? 5 : 2,
+                      dashPattern: [
+                        fighter != null ? 0.1 : 5
+                      ],
+                      borderType: BorderType.RRect,
+                      radius: Radius.circular(5),
+                        child: Container(
+                          color: !widget.isUser ? Colors.grey.withAlpha(50) : Colors.transparent,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              widget.playerNum == 1 ? text : image,
+                              widget.playerNum == 1 ? image : text,
+                            ]
+                          ),
+                        ),
+                    ),
+                  );
+            }
           ),
         );
+      }
+    );
   }
-
 }
+
+
+
 
 class FighterSelectTableFromScheme extends StatefulWidget {
 
-  FighterSelectTableFromScheme(this.scheme, this.initDim);
+  FighterSelectTableFromScheme(this.toggleInParent, this.scheme, this.initDim);
   GameScheme scheme;
   double initDim;
+  Function toggleInParent;
+
+  final scrollControllerH = new ScrollController(keepScrollOffset: false);
+  final scrollControllerV = new ScrollController(keepScrollOffset: false);
 
   @override
   _FighterSelectTableFromScheme createState() => _FighterSelectTableFromScheme(initDim);
@@ -639,8 +742,6 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
   final DataBloc data = BlocProvider.instance.dataBloc;
   final NetworkServices net = NetworkServiceProvider.instance.netService;
 
-  final _scrollController = new ScrollController(keepScrollOffset: false);
-  final _scrollController2 = new ScrollController(keepScrollOffset: false);
 
 
   List<TableRow> tableRows;
@@ -648,6 +749,8 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
   double boxDim;
   double localScale = 1;
   double boxDimTemp;
+
+  bool isDraggable = true;
 
   _FighterSelectTableFromScheme(double initDim){
     this.boxDim = initDim;
@@ -665,12 +768,24 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
     });
   }
 
-  void HandleTap(int i, int j) {
-    // TODO Touching enters fighter for selected fighter entry, and moves selection on
+  void HandleTap(int i, int j, int fighterSelected, int pNum) {
+    Square squareSelected = widget.scheme.grid.getSquare(i, j);
+    FighterScheme fighter = squareSelected.fighter;
+    print('tapped');
+
+    //_scrollController.animateTo(j*boxDim, duration: Duration(milliseconds: 200), curve: Curves.easeIn);
+
+    widget.toggleInParent();
+    data.appStateEventSink.add(FighterSelectedEvent(fighter, pNum, fighterSelected));
+    data.appStateEventSink.add(FighterEntrySelectionEvent(null));
+
   }
 
   void HandleLongPress(int i, int j) {
-
+    print('longpress');
+    setState(() {
+      isDraggable = true;
+    });
   }
 
   @override
@@ -687,16 +802,17 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
 
       for(int j = 0; j <= cols; j++)
       {
+        Square square = widget.scheme.grid.getSquare(i, j);
         // OPTION 1: Text representation
         Widget textWidget = FittedBox(
             fit: BoxFit.fitHeight,
-            child: AutoSizeText(widget.scheme.grid.getSquare(i, j).GetName())
+            child: AutoSizeText(square.GetName())
         );
 
         // OPTION 2: Image representation
         Widget imgWidget = FittedBox(
             fit: BoxFit.fill,
-            child: widget.scheme.grid.getSquare(i, j).GetImage(1)
+            child: square.GetImage(0.7)
         );
 
         rowContents.add(
@@ -706,18 +822,45 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
                 builder: (context, snapshot) {
 
                   DataModel model = snapshot.data.model;
+                  int fighterSelected = model.challengeState.entrySelection;
+                  int pNum = model.challengeState.challengeInProgress.meta.player1.userName == model.user.meta.userName ? 1 :
+                    model.challengeState.challengeInProgress.meta.player2.userName == model.user.meta.userName ? 2 : 0;
 
-                  return GestureDetector(
+                  Widget squareChild = GestureDetector(
                     onLongPress: () {HandleLongPress(i, j);},
-                    onTap: () { HandleTap(i, j); },
+                    onTap: () { HandleTap(i, j, fighterSelected, pNum); },
                     child:
                     SizedBox(
-                        width: boxDim,
-                        height: boxDim,
-                       // child: (model.schemeEditorState.schemeEditorGridSelection.compare(i, j) ?
-                       // imgWidget.BORDER(model.schemeEditorState.swapMode ? Colors.purpleAccent : Colors.yellow, 3.0) : imgWidget).PADDING(EdgeInsets.all(2))
+                      width: boxDim,
+                      height: boxDim,
+                      // child: (model.schemeEditorState.schemeEditorGridSelection.compare(i, j) ?
+                      // imgWidget.BORDER(model.schemeEditorState.swapMode ? Colors.purpleAccent : Colors.yellow, 3.0) : imgWidget).PADDING(EdgeInsets.all(2))
                       child: imgWidget.PADDING(EdgeInsets.all(2)),
                     ),
+                  );
+
+                  double feedbackSize = 50;
+
+                  return !isDraggable || square.fighter == null ? squareChild
+                      : Draggable<Square>(
+                    onDragStarted: (){
+                      widget.toggleInParent();
+                    },
+                    onDragCompleted: (){
+                      if(model.challengeState.challengeInProgress.IsMaxChosen(pNum)) return;
+                      data.appStateEventSink.add(FighterEntrySelectionEvent(null));
+                      widget.toggleInParent();
+                    },
+                    onDraggableCanceled: (vel, off){
+                      if(model.challengeState.challengeInProgress.IsMaxChosen(pNum)) return;
+                      widget.toggleInParent();
+                    },
+                    data: square,
+                    feedback: Transform.translate(
+                        offset:
+                        Offset.zero, //Offset(-feedbackSize/2,-feedbackSize/2),
+                        child: FittedBox(fit: BoxFit.fill, child: imgWidget.PADDING(EdgeInsets.all(2)).SIZED(width: feedbackSize, height: feedbackSize))),
+                    child: squareChild,
                   );
                 }
             )
@@ -734,42 +877,67 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
         builder: (context,snapshot) {
 
           return GestureDetector(
+            onScaleStart: (details){
+
+            },
             onScaleUpdate: (details){
+              if(isDraggable) return;
               localScale = details.scale;
               ChangeDim(localScale * boxDimTemp, false);
             },
             onScaleEnd: (details) {
+              if(isDraggable) return;
               ChangeDim(localScale * boxDimTemp, true);
               localScale = 1;
             },
-            child: Scrollbar(
-                controller: _scrollController2,
+            child: Stack(
+              children:[
+              Scrollbar(
+                controller: widget.scrollControllerV,
                 child: ListView(
-                    children: <Widget>[
-                      SingleChildScrollView(
-                          physics: AlwaysScrollableScrollPhysics(),
-                          controller: _scrollController,
-                          scrollDirection: Axis.horizontal,
-                          child:
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Center(child:
+                  physics: AlwaysScrollableScrollPhysics(),
+                  children: <Widget>[
+                    SingleChildScrollView(
+                        physics: AlwaysScrollableScrollPhysics(),
+                        controller: widget.scrollControllerH,
+                        scrollDirection: Axis.horizontal,
+                        child:
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Center(child:
 
-                              Container(
-                                child: Table(
-                                  //border: TableBorder.all(color: Colors.red),
-                                    defaultColumnWidth: IntrinsicColumnWidth(),
-                                    children: tableRows
-                                ),
-                              )
-
+                            Container(
+                              child: Table(
+                                //border: TableBorder.all(color: Colors.red),
+                                  defaultColumnWidth: IntrinsicColumnWidth(),
+                                  children: tableRows
                               ),
-                            ],
-                          )
-                      )
-                    ])),
-          );
+                            )
+                            ),
+
+
+                          ],
+                        )
+                    )
+
+                  ],
+                ),
+              ),
+
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: FlatButton(
+                    color: Colors.white,
+                    onPressed: () { setState(() {
+                    isDraggable = !isDraggable;
+                  }); },
+                    child: Text(isDraggable ? 'DRAG' : 'SCROLL/ZOOM'),),
+                )
+              ]
+            ) ,
+
+                );
         },
       );
   }

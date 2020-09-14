@@ -1,6 +1,7 @@
 
 import 'dart:convert';
 
+import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/widgets/my_app_bar.dart';
 
 import 'package:edojo/bloc/bloc.dart';
@@ -76,6 +77,16 @@ class _HomeDefaultState extends State<HomeDefault> {
           AuthState ds = snapshot.data;
 
           return Scaffold(
+            drawer: Drawer(
+              child: ListView(
+                children: [
+                  ListTile(
+                    title: Text('Clear all cached data', style: TextStyle(color: Colors.black)),
+                    onTap: (){ data.appStateEventSink.add(ClearCacheEvent()); },
+                  )
+                ]
+              )
+            ),
               appBar: MyAppbar(
                 //leading: Icon(Icons.arrow_back, color: Colors.white,),
                 title: Text(
@@ -120,6 +131,8 @@ class _HomeDefaultState extends State<HomeDefault> {
         });
   }
 }
+
+
 
 
 

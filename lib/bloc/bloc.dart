@@ -3,6 +3,7 @@ import 'package:edojo/bloc/appstate_events.dart';
 import 'package:edojo/classes/data_model.dart';
 import 'package:edojo/classes/misc.dart';
 import 'package:edojo/tools/network.dart';
+import 'package:edojo/tools/storage.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 import 'appstate_states.dart';
@@ -281,6 +282,47 @@ class DataBloc extends Bloc {
         await NetworkServiceProvider.instance.netService.SendChallengeRequest(event.challengeInfo);
       }
 
+      if(event is ChallengeStartedEvent)
+      {
+        model.challengeState.challengeInProgress = event.ch;
+        model.challengeState.SetScheme(event.scheme);
+
+        print('CHALLENGE STARTED: C received ' + event.ch.toJson().toString());
+        _appStateSink.add(AppStateState(model));
+
+      }
+
+      if(event is FighterSelectedEvent)
+        {
+          if(event.fighterNum == null) return;
+
+          if(model.challengeState.challengeInProgress.state == null)
+            model.challengeState.challengeInProgress.state = new ChallengeStatus();
+
+          // TODO A savvy data-saving way that doesn't dupe with local changes
+          // Get current state and clone it, so we don't duplicate changes made
+          // print('state at first: ' + model.challengeState.challengeInProgress.state.toJson().toString());
+          // ChallengeStatus currentState = ChallengeStatus.fromJson(model.challengeState.challengeInProgress.state.toJson());
+          //
+          // print('state before: ' + currentState.toJson().toString());
+          // currentState.SelectFighter(event.fighter, event.playerNum, event.fighterNum); // LOCAL WAY
+          // print('state after: ' + currentState.toJson().toString());
+
+          ChallengeStatus currentState = model.challengeState.challengeInProgress.state;
+          print('state before: ' + currentState.toJson().toString());
+
+          currentState.SelectFighter(event.fighter, event.playerNum, event.fighterNum);
+          print('state after: ' + currentState.toJson().toString());
+
+          String cid = model.challengeState.challengeInProgress.meta.challengeId;
+
+          // Notify the rtd
+          await NetworkServiceProvider.instance.netService.PushNewChallengeState(cid, currentState);
+
+          _appStateSink.add(AppStateState(model));
+
+        }
+
       if(event is ChallengeRequestChange)
       {
         if(event.snap == null || event.snap.value == null)
@@ -341,12 +383,23 @@ class DataBloc extends Bloc {
         // Takes to full profile TODO
       }
 
-      if(event is ChallengeChange)
+      if(event is ChallengeStateChange)
         {
+          ChallengeStatus newState = ChallengeStatus.fromJson(Map<String,dynamic>.from(event.snap.value));
+          await model.challengeState.RefreshChallengeState(newState);
+          _appStateSink.add(AppStateState(model));
+        }
 
+      if(event is FighterEntrySelectionEvent)
+        {
+          model.challengeState.ChangeEntrySelection(event.fighterNum);
+          _appStateSink.add(AppStateState(model));
+        }
 
-
-
+      // Dev events
+      if(event is ClearCacheEvent)
+        {
+          StorageManager.instance.ClearCache();
         }
     }
   }
@@ -378,7 +431,7 @@ class DataBloc extends Bloc {
   Future<void> refreshChallengeCodes() async {
     if(model.user.GetChallengeCodes() != null) {
       for (String code in model.user.GetChallengeCodes()) {
-        if (!model.hasChallenge(code)) {
+        if (!model.hasChallenge(code) && code != '') {
           Challenge challenge = await NetworkServiceProvider
               .instance.netService.GetChallengeFromCode(code);
           model.AddChallenge(challenge);
