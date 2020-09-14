@@ -5,3 +5,5 @@ A multi-platform app built in Flutter for fighting game enthusiasts. It provides
 Currently uses Firebase for all its online functionality, though in theory any implementation of the 'NetworkServices' class could allow for alternative approaches.
 
 Data model management is done through BLoC-inspired stream and sink system which interact with a centralised data center.
+
+Status: Work in progress
