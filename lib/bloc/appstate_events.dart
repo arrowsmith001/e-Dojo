@@ -50,10 +50,17 @@ class SchemeEditorCellHeldEvent extends SchemeEditorEvent{
 
 }
 class FighterAddedToSchemeEvent extends SchemeEditorEvent {
-  FighterAddedToSchemeEvent(this.map);
+  FighterAddedToSchemeEvent(this.map, this.square);
   Map<String,dynamic> map;
+  Square square;
+ // File iconFile;
 
 }
+class SwapSquaresEvent extends SchemeEditorEvent {
+  SwapSquaresEvent(this.gridRef);
+  GridSelection gridRef;
+}
+class ToggleSwapModeEvent extends SchemeEditorEvent {}
 class SchemeEditorPageChanged extends SchemeEditorEvent {
   SchemeEditorPageChanged(this.to);
   int to;

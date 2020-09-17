@@ -266,19 +266,7 @@ class SchemeEditorState
   void TrySelectCell(GridSelection gridSelection) {
     if(gridSelection.x <= schemeInEditor.grid.dim.maxRow && gridSelection.y <= schemeInEditor.grid.dim.maxCol)
     {
-      if(!swapMode)
-      {
         this.schemeEditorGridSelection = gridSelection;
-
-      }
-      else // Swap current and new selection
-          {
-        schemeInEditor.grid.Swap(schemeEditorGridSelection, gridSelection);
-
-        this.schemeEditorGridSelection = gridSelection;
-        swapMode = false;
-      }
-
 
     }
 
@@ -310,23 +298,19 @@ class SchemeEditorState
 
   }
 
-  Future<void> AddFighterToSchemeInEditor(Map<String, dynamic> map) async {
+  Future<void> AddFighterToSchemeInEditor(Map<String, dynamic> map, Square square) async {
 
     String name = map['Name'];
     String imgId = null;
 
-    List list = map['Icon'];
-    if(list != null && list.isNotEmpty)
-    {
-      File newFile = await CacheImageFileForUpload('icons',list[0]);
-      map['Icon'] = newFile;
-      imgId = newFile.path.split('/').last.split('.').first;
-    }
-    else map['Icon'] = null;
+    File file = map['Icon'];
+    File newFile = await CacheImageFileForUpload('icons',file);
+    map['Icon'] = newFile;
+    imgId = newFile.path.split('/').last.split('.').first;
 
 
     List<String> variants;
-    if(map['Variations'] > 0)
+    if(map['Variations']!=null && map['Variations'] > 0)
     {
       variants = [];
 
@@ -339,18 +323,11 @@ class SchemeEditorState
     FighterScheme f = new FighterScheme(name, imgId, variants);
     f.SetImage(map['Icon']);
 
-    if(schemeEditorPageNum == 0)
-    {
-      schemeInEditor.AddFighter(f);
-    }
-    else
-    {
-      schemeInEditor.AddFighterAt(f, schemeEditorGridSelection.x, schemeEditorGridSelection.y);
-    }
+    schemeInEditor.AddFighterToSquare(f, square);
 
   }
 
-  void ToggleSwapMode(GridSelection gridSelection) {
+  void ToggleSwapMode() {
     swapMode = !swapMode;
   }
 
@@ -359,7 +336,7 @@ class SchemeEditorState
     if(schemeInEditor == null) return '';
     Square squ = schemeInEditor.grid.getSquare(schemeEditorGridSelection.x, schemeEditorGridSelection.y);
 
-    if(squ.fighter == null) return '<Empty>';
+    if(squ.fighter == null) return 'ADD NEW FIGHTER';
     else return squ.fighter.fighterName;
 
   }
@@ -374,14 +351,12 @@ class SchemeEditorState
     String name = map['Name'];
 
     String imgId = null;
-    List list = map['Icon'];
-    if(list != null && list.isNotEmpty)
-    {
-      File newFile = await CacheImageFileForUpload('icons',list[0]);
-      map['Icon'] = newFile;
-      imgId = newFile.path.split('/').last.split('.').first;
-    }
-    else map['Icon'] = null;
+    File file = map['Icon'];
+
+    File newFile = await CacheImageFileForUpload('icons',file);
+    map['Icon'] = newFile;
+    imgId = newFile.path.split('/').last.split('.').first;
+
 
     List<String> variants;
 

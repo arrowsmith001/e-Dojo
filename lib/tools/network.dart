@@ -359,14 +359,12 @@ class AllFirebaseNetworkServices extends NetworkServices {
       GameScheme downloadedScheme = new GameScheme.fromJson(map);
       downloadedScheme.MakeGridFromUpload();
 
-      Directory tempDir = await StorageManager.instance.GetTempDir();
-
       for(FighterScheme f in downloadedScheme.roster)
         {
           String iconImgId = f.iconImgId;
           if(iconImgId == null) continue;
 
-          File file = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId, tempDir);
+          File file = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId);
 
           f.iconImg = Image.file(file);
     }
@@ -375,14 +373,14 @@ class AllFirebaseNetworkServices extends NetworkServices {
         {
           String iconImgId = downloadedScheme.meta.iconImgId;
 
-          File file = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId, tempDir);
+          File file = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId);
 
           downloadedScheme.meta.iconImg = Image.file(file);
         }
 
-      StorageManager.instance.AddGameSchemeToCache(downloadedScheme);
+      // StorageManager.instance.AddGameSchemeToCache(downloadedScheme);
       return downloadedScheme;
-      //appStateEventSink.add(SchemeEditLoadedEvent(downloadedScheme));
+      appStateEventSink.add(SchemeEditLoadedEvent(downloadedScheme));
 
 
   }
@@ -614,14 +612,14 @@ class AllFirebaseNetworkServices extends NetworkServices {
     appStateEventSink.add(NewSchemeEditUploadingEvent());
 
     try {
-      GameScheme schemeClone = GameScheme.jsonClone(gameScheme);
-      schemeClone.ClearVarsForUpload();
+     // GameScheme schemeClone = GameScheme.jsonClone(gameScheme);
+      //schemeClone.ClearVarsForUpload();
 
       Directory tempDir = StorageManager.instance.appDir == null ? await StorageManager.instance.GetTempDir() : StorageManager.instance.appDir;
       String tempPath = tempDir.path;
       //Map<String,File> toUpload = {};
 
-      for (FighterScheme f in schemeClone.roster) {
+      for (FighterScheme f in gameScheme.roster) {
 
         String iconImgId = f.iconImgId;
         if (iconImgId == null) continue;
@@ -650,22 +648,22 @@ class AllFirebaseNetworkServices extends NetworkServices {
       Map<String, dynamic> updates = {};
       String key;
 
-      if(schemeClone.meta.schemeID != null) key = schemeClone.meta.schemeID;
+      if(gameScheme.meta.schemeID != null) key = gameScheme.meta.schemeID;
       else {
         key = dbRef.push().key;
-        schemeClone.meta.schemeID = key;
         gameScheme.meta.schemeID = key;
 
         updates.addAll({ 'users/${user.meta.userName}/${User.SCHEMES_IN_EDITOR}/$key' : '' });
       }
 
-        updates.addAll({ 'schemes/$key' : schemeClone.toJson() });
+        updates.addAll({ 'schemes/$key' : gameScheme.toJson() });
 
-        print(schemeClone.toJson());
+        print("SCHEME UPDATING: " + gameScheme.toJson().toString());
+
         await dbRef.update(updates);
 
         // Add local changes
-        appStateEventSink.add(NewSchemeEditUploadedEvent(schemeClone));
+        appStateEventSink.add(NewSchemeEditUploadedEvent(gameScheme));
 
       //Map<String, dynamic> json = gameScheme.toJson();
 
@@ -696,7 +694,8 @@ class AllFirebaseNetworkServices extends NetworkServices {
       print('GetNetworkImage creating local path: $path');
 
         File file = await File(path).create(recursive: true);
-        storeRef.child('icons/$iconImgId.png').writeToFile(file);
+        StorageFileDownloadTask task = storeRef.child('icons/$iconImgId.png').writeToFile(file);
+        FileDownloadTaskSnapshot snap = await task.future;
 
         return file;
     }
@@ -732,7 +731,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
         int upvotes = doc['upvotes'];
 
         File imgFile;
-        if(iconImgId != null && iconImgId != '') imgFile = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId, tempDir);
+        if(iconImgId != null && iconImgId != '') imgFile = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId);
 
         out.add(new SchemeMetadata.fromQuery(schemeId, name, nickname, iconImgId, imgFile, upvotes));
       }
@@ -741,7 +740,9 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
   }
 
-  Future<File> _ReturnNetworkImageFileOrCachedIfExists(String iconImgId, Directory tempDir) async {
+  Future<File> _ReturnNetworkImageFileOrCachedIfExists(String iconImgId) async {
+
+    Directory tempDir = await getTemporaryDirectory();
 
     // Ratify images against cache and, if not there, add them
     String path = tempDir.path + '/icons/' + iconImgId + '.png';

@@ -1,5 +1,8 @@
 //import 'dart:html';
+import 'dart:core';
+import 'dart:ffi';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:edojo/widgets/my_app_bar.dart';
 import 'package:auto_size_text/auto_size_text.dart';
@@ -12,11 +15,13 @@ import 'package:edojo/tools/assets.dart';
 import 'package:edojo/tools/network.dart';
 import 'package:edojo/tools/storage.dart';
 import 'package:edojo/widgets/layout.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:edojo/classes/misc.dart';
 import 'package:edojo/widgets/extensions.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_form_builder/src/widgets/image_source_sheet.dart';
 import 'package:image_picker/image_picker.dart';
@@ -195,6 +200,7 @@ class _PublishedSchemeBrowserState extends State<PublishedSchemeBrowser> {
   DataBloc data = BlocProvider.instance.dataBloc;
   final NetworkServices net = NetworkServiceProvider.instance.netService;
 
+
   @override
   void initState() {
     print('_PublishedSchemeBrowserState initState called');
@@ -273,26 +279,16 @@ class _SchemeEditorState extends State<SchemeEditor> {
   final DataBloc data = BlocProvider.instance.dataBloc;
   final NetworkServices net = NetworkServiceProvider.instance.netService;
 
-  PageController _controller;
+  List<File> images = List<File>();
+
+  ScrollController _scrollController;
 
   void initState(){
     super.initState();
-    _controller = new PageController(initialPage: data.model.schemeEditorState.schemeEditorPageNum);
-    page = data.model.schemeEditorState.schemeEditorPageNum;
+    _scrollController = new ScrollController();
+    // _controller = new PageController(initialPage: data.model.schemeEditorState.schemeEditorPageNum);
+    // page = data.model.schemeEditorState.schemeEditorPageNum;
 
-  }
-
-  int page = 0;
-  void ChangePage() {
-
-    setState(() {
-
-      _controller.animateToPage((page == 0 ? 1 : 0), duration: Duration(milliseconds: 300), curve: Curves.easeIn);
-    page = page == 1 ? 0 : 1;
-
-    data.appStateEventSink.add(SchemeEditorPageChanged(page));
-
-    });
   }
 
   void EditGridDimensions(DataModel model, Ops op, GridOps grid) {
@@ -305,11 +301,20 @@ class _SchemeEditorState extends State<SchemeEditor> {
   void AddOrEditFighter(Square square) {
 
     showDialog(context: context, builder: (context) {
-      return NewPlayerDialog(square);
+      return NewPlayerDialog(square, square.fighter.iconImgFile);
     });
-   // appState.appStateEventSink.add(StartNewSchemeEditEvent('New Game','NG'));
+   //appState.appStateEventSink.add(StartNewSchemeEditEvent('New Game','NG'));
 
   }
+
+  showHowToAddFighter() {
+
+    showDialog(context: context, builder: (context) {
+      return HowToAddFighterDialog();
+    });
+
+  }
+
 
   void SaveThisScheme(User user, GameScheme scheme) {
 
@@ -358,111 +363,178 @@ class _SchemeEditorState extends State<SchemeEditor> {
               children: [
                   Container(
                     decoration: BoxDecoration(border: Border(bottom: BorderSide(width: 2, color: Colors.white))),
-                    child: PageView(
-                      controller: _controller,
-                      physics: NeverScrollableScrollPhysics(),
-                        children:
-                            [
-                              scheme == null || scheme.GetRosterLength() == 0 ? Center(child: Text('No fighters added'))
-                              : ListView.builder(
-                                shrinkWrap: true,
-                                itemCount: scheme.GetRosterLength(),
-                                  itemBuilder: (context, i) {
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            FighterTableFromScheme(scheme).EXPANDED(),
+                            Container(width: 50, child: Column(mainAxisSize: MainAxisSize.min, children: [
+                              Container().EXPANDED(),
+                              IconButton(onPressed: () { EditGridDimensions(model, Ops.remove, GridOps.row); }, icon: Icon(Icons.remove, color: Colors.white,)),
+                              IconButton(onPressed: () { EditGridDimensions(model, Ops.add, GridOps.row); }, icon: Icon(Icons.add, color: Colors.white)) ])//.FLEXIBLE()
+                            )
+                          ],
+                        ).FLEXIBLE()
+                        ,
+                        Container(
+                          height: 50,
+                          child: Flex(
+                            direction: Axis.vertical,
+                            children: [Row(
+                              children: <Widget>[
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Container(height: 50,
+                                       child: FlatButton(
+                                         child: Text(square.fighter == null ? fighterString : 'Edit ' + fighterString,
+                                             style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
+                                         onPressed: (){
+                                           square.fighter == null ? showHowToAddFighter() : AddOrEditFighter(square);
+                                         },
+                                       )).EXPANDED(),
 
-
-                                return ListTile(
-                                  title: Text(scheme.roster[i] == null ? '' : scheme.roster[i].fighterName),
-                                  leading: SizedBox(height: 50, width: 50, child: FittedBox(fit: BoxFit.fill,
-                                      child: scheme.roster[i].GetFighterImage()
-                                  )),
-                                );
-                              }),
-
-                                Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                  Row(
-                                    children: [
-                                      FighterTableFromScheme(scheme).EXPANDED(),
-                                      Container(width: 50, child: Column(mainAxisSize: MainAxisSize.min, children: [
-                                        Container().EXPANDED(),
-                                        IconButton(onPressed: () { EditGridDimensions(model, Ops.remove, GridOps.row); }, icon: Icon(Icons.remove, color: Colors.white,)),
-                                        IconButton(onPressed: () { EditGridDimensions(model, Ops.add, GridOps.row); }, icon: Icon(Icons.add, color: Colors.white)) ])//.FLEXIBLE()
-                                      )
-                                    ],
-                                  ).FLEXIBLE()
-                                    ,
-                                  Container(
-                                    height: 50,
-                                    child: Flex(
-                                      direction: Axis.vertical,
-                                      children: [Row(
-                                        children: <Widget>[
-                                          Row(mainAxisSize: MainAxisSize.min, children: [
-                                            Container(height: 50, child:
-                                            Text(swapMode ? swapString : fighterString, textAlign: TextAlign.center, style: TextStyle(fontStyle: FontStyle.italic, color: swapMode ? Colors.purpleAccent : Colors.white,))).EXPANDED(),
-                                            IconButton(onPressed: () { EditGridDimensions(model, Ops.remove, GridOps.column); }, icon: Icon(Icons.remove, color: Colors.white)),
-                                            IconButton(onPressed: () { EditGridDimensions(model, Ops.add, GridOps.column); }, icon: Icon(Icons.add, color: Colors.white)) ]).FLEXIBLE()
-                                          ,
-                                          Container(height: 50, width: 50)
-                                        ],
-                                      ).FLEXIBLE()
-                                      ],
-                                    )
-                                    ,
-                                  )
-                                ],)
-                ]),
+                                  IconButton(onPressed: () { EditGridDimensions(model, Ops.remove, GridOps.column); }, icon: Icon(Icons.remove, color: Colors.white)),
+                                  IconButton(onPressed: () { EditGridDimensions(model, Ops.add, GridOps.column); }, icon: Icon(Icons.add, color: Colors.white)) ]).FLEXIBLE()
+                                ,
+                                Container(
+                                    child: IconButton(
+                                      onPressed: () {
+                                        data.appStateEventSink.add(ToggleSwapModeEvent());
+                                      },
+                                      icon: Icon(swapMode ? Icons.pan_tool : Icons.zoom_out_map),
+                                    ),
+                                    height: 50, width: 50)
+                              ],
+                            ).FLEXIBLE()
+                            ],
+                          )
+                          ,
+                        )
+                      ],),
                   ).FLEX(2),
 
-                 Container(
-                   height: 100,
-                   child: Column(
-                     children: <Widget>[
-                       Row(
-                           children:[
-                             Container(child: scheme == null ? Empty() : scheme.GetGameImage()).FLEXIBLE(),
-                             RaisedButton(
-                               child: Text(page == 0 ? 'Grid view' : 'List view'),
-                               onPressed: () {
-                                 ChangePage();
-                               },
+                Container(
+                    height: 100,
+                    child: Row(
+                      children: [
+                        ListView.builder(
+                          shrinkWrap: true,
+                            physics: AlwaysScrollableScrollPhysics(),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: images.length,
+                            itemBuilder: (context, i) {
 
-                             ),
-                             RaisedButton(
-                               child: Text(square.fighter == null ? 'Add Fighter' : 'Edit Fighter'),
-                               onPressed: () {
-                                 AddOrEditFighter(square);
-                               },
+                            Image img = Image.file(images[i]);
 
-                             ),
-                           ]
-                       ).FLEXIBLE(),
+                            try{
+                              return Container(
+                                child: Draggable<File>(
+                                  onDragEnd: (info){
 
-                       RaisedButton(
-                         child: Text('Upload'),
-                         onPressed: () {
-                           net.UploadScheme(user, scheme);
-                         },
+                                  },
+                                  data: images[i],
+                                  affinity: Axis.vertical,
+                                  feedback: Opacity(opacity: 0.7,
+                                    child: SizedBox(
+                                      child: img,
+                                      width: 100,
+                                      height: 100,
+                                    ),
+                                  ),
+                                  child: SizedBox(
+                                    child: FittedBox(
+                                      child: img,
+                                      fit: BoxFit.fill
+                                    ),
+                                    width: 100,
+                                    height: 100,
+                                  ),
+                                ),
+                              );
+                            }catch(e){
+                              return Empty();
+                            }
 
-                       )
+                            }).EXPANDED()
+                      ],
+                    )
+                )
 
-
-                     ],
-                   ),
-                 ).FLEX(0),
 
               ],
             )
           ).MY_BACKGROUND_CONTAINER(),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+            BrowseForImages();
+          },
+
+          ),
         );
       }
     );
   }
 
 
+  //List<Asset> assets = List<Asset>();
+
+  Future<void> BrowseForImages() async {
+    List<File> imagesPicked = List<File>();
+
+    try{
+      FilePickerResult result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: true);
+
+      setState(() {
+        images = result.files.map<File>((str) { print(str.path); return new File(str.path); }).toList();
+      });
+
+    } catch (e) {
+      print(e.toString());
+    }
+
+    // try {
+    //   List resultList = await FlutterMultipleImagePicker.pickMultiImages(
+    //       100, false);
+    //
+    //   for(int i = 0; i < resultList.length; i++)
+    //     {
+    //       imagesPicked.add(
+    //           new File(resultList[i].toString()));
+    //     }
+    //
+    //   setState(() {
+    //     images = imagesPicked;
+    //   });
+    //
+    // } on PlatformException catch (e) {
+    //   print('ERROR: ' + e.message);
+    // }
+
+
+
 
 }
+
+
+}
+
+class HowToAddFighterDialog extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    return AlertDialog(
+      content: Column(
+        children: [
+          Text('1. Import photos into bar below'),
+          Text('2. Drag icon to grid'),
+          Text('3. Enter details, and save your fighter!'),
+        ],
+      ).MY_BACKGROUND_CONTAINER(),
+    );
+  }
+}
+
+
 
 class NewGameDialog extends StatefulWidget {
   NewGameDialog();
@@ -578,9 +650,10 @@ class _NewGameDialogState extends State<NewGameDialog> {
 
 
 class NewPlayerDialog extends StatefulWidget {
-  NewPlayerDialog(this.square);
+  NewPlayerDialog(this.square, this.iconFile);
 
   Square square;
+  File iconFile;
 
   @override
   _NewPlayerDialogState createState() => _NewPlayerDialogState();
@@ -597,7 +670,7 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
   }
 
   String helperText = 'List any variations/equippable items that a fighter can take into battle.';
-  int variantNum;
+  int variantNum = 0;
 
   void ChangeListNum(int to)
   {
@@ -609,7 +682,9 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
 
   Future<void> ProcessFighterForm(Map<String, dynamic> map) async {
 
-    if(widget.square.fighter == null) data.appStateEventSink.add(FighterAddedToSchemeEvent(map));
+    map['Icon'] = widget.iconFile;
+
+    if(widget.square.fighter == null) data.appStateEventSink.add(FighterAddedToSchemeEvent( map, widget.square));
     else {data.appStateEventSink.add(FighterEditedInSchemeEvent(widget.square.fighter, map));}
 
     Navigator.of(context).pop("");
@@ -619,97 +694,98 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
   Widget build(BuildContext context) {
 
     return AlertDialog(
+      scrollable: true,
       backgroundColor: Color.fromRGBO(29, 50, 89, 1.0),
           title: Text(widget.square.fighter == null ? 'New Fighter' : 'Edit ${widget.square.fighter.fighterName}'),
           content: FormBuilder(
               key: _fbKey,
               // autovalidate: _resetValidate,
-              child: SingleChildScrollView(
-                physics: ScrollPhysics(),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children:<Widget>[
-                    FormBuilderTextField(
-                        attribute: 'Name',
-                        initialValue: widget.square.fighter == null ? '' : widget.square.fighter.fighterName,
-                        decoration: InputDecoration(
-                            labelText: 'Name',
-                            helperText: 'This fighter\'s name.',
-                        filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0)),
-                        validators: [
-                          FormBuilderValidators.required(errorText:'Required field')
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children:<Widget>[
+
+                  // Icon image
+                  Center(
+                    child: SizedBox(
+                        child: FittedBox(
+                            fit: BoxFit.fill,
+                            child: Image.file(widget.iconFile)
+                        ),
+                        width: 100,
+                        height: 100
+                    ),
+                  ).FLEXIBLE(),
+
+                  // Name field
+                  FormBuilderTextField(
+                      attribute: 'Name',
+                      initialValue: widget.square.fighter == null ? '' : widget.square.fighter.fighterName,
+                      decoration: InputDecoration(
+                          labelText: 'Name',
+                          helperText: 'This fighter\'s name.',
+                          filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0)),
+                      validators: [
+                        FormBuilderValidators.required(errorText:'Required field')
+                      ]
+                  ).FLEXIBLE(),
+
+                  // Padding
+                  Padding(padding: EdgeInsets.all(10),),
+
+                  // Variants
+                  Container(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children:[
+                          FormBuilderTouchSpin(
+                              onChanged: (value) { ChangeListNum(value); },
+                              min: 0,
+                              step: 1,
+                              initialValue: variantNum,
+                              attribute: 'Variations',
+                              decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Color.fromRGBO(0, 0, 0, 0),
+                                  labelText: ('Variations (optional)'),
+                                  helperText: variantNum == 0 ? helperText : null ,
+                                  helperMaxLines: 3),
+                              validators: [
+                                    (dynamic) => null
+                              ]
+                          ).FLEXIBLE(),
+
+                          // TODO Variants
+                          // Column(
+                          //   children: [
+                          //     ListView.builder(
+                          //         physics: NeverScrollableScrollPhysics(),
+                          //         shrinkWrap: true,
+                          //         itemCount: variantNum,
+                          //         itemBuilder: (context, j) {
+                          //           return FormBuilderTextField(
+                          //             initialValue: widget.square.fighter == null || widget.square.fighter.variants == null ? '' : widget.square.fighter.variants[j],
+                          //             attribute: 'Variant$j',
+                          //             decoration: InputDecoration(
+                          //                 filled: true,
+                          //                 fillColor: Colors.transparent,
+                          //                 labelText: '${j + 1}',
+                          //                 helperText: j + 1 == variantNum ? helperText : null,
+                          //                 helperMaxLines: 3),
+                          //             validators: [
+                          //               FormBuilderValidators.required(errorText:'List item should be filled or removed')
+                          //             ],
+                          //           );
+                          //         }
+                          //     ).FLEXIBLE()
+                          //   ],
+                          // ).EXPANDED(),
+
                         ]
                     ),
-                    Padding(padding: EdgeInsets.all(10),),
-                    FormBuilderImagePicker(
-                      initialValue: widget.square.fighter == null || widget.square.fighter.iconImgFile == null ? [] : [widget.square.fighter.iconImgFile],
-                      maxImages: 1,
-                      imageWidth: 50,
-                      imageHeight: 50,
-                      decoration: InputDecoration(filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0), helperText: 'Image that identifies this fighter.'),
-                      labelText: 'Icon (optional)',
-                      attribute: 'Icon',
-
-                    ),
-                    Padding(padding: EdgeInsets.all(10),),
-                    ListView.builder(
-                        physics: NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        itemCount: 1,
-                        itemBuilder: (context, i) {
-                          return Container(
-                            child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children:[
-                                        FormBuilderTouchSpin(
-                                            onChanged: (value) { ChangeListNum(value); },
-                                            min: 0,
-                                            step: 1,
-                                            initialValue: variantNum,
-                                            attribute: 'Variations',
-                                            decoration: InputDecoration(
-                                              filled: true,
-                                                fillColor: Color.fromRGBO(0, 0, 0, 0),
-                                                labelText: ('Variations (optional)'),
-                                                helperText: variantNum == 0 ? helperText : null ,
-                                                helperMaxLines: 3),
-                                            validators: [
-                                              (dynamic) => null
-                                            ]
-                                        ),
-                                        ListView.builder(
-                                            physics: NeverScrollableScrollPhysics(),
-                                            shrinkWrap: true,
-                                            itemCount: variantNum,
-                                            itemBuilder: (context, j) {
-                                              return FormBuilderTextField(
-                                                initialValue: widget.square.fighter == null || widget.square.fighter.variants == null ? '' : widget.square.fighter.variants[j],
-                                                attribute: 'Variant$j',
-                                                decoration: InputDecoration(
-                                                    filled: true,
-                                                    fillColor: Colors.transparent,
-                                                    labelText: '${j + 1}',
-                                                    helperText: j + 1 == variantNum ? helperText : null,
-                                                    helperMaxLines: 3),
-                                                validators: [
-                                                  FormBuilderValidators.required(errorText:'List item should be filled or removed')
-                                                ],
-                                              );
-                                            }
-                                        ),
-                                      ]
-                                  )
-                                ]
-                            ),
-                          );
-                        }),
+                  ),
 
 
-                  ],
-                ),
+                ],
               )
           )
 
@@ -741,11 +817,6 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
   }
 
 }
-
-
-
-
-
 
 
 
@@ -787,8 +858,19 @@ class _FighterTableFromSchemeState extends State<FighterTableFromScheme> {
   }
 
   void HandleLongPress(int i, int j) {
-    data.appStateEventSink.add(SchemeEditorCellHeldEvent(new GridSelection.init(i, j)));
+    // data.appStateEventSink.add(SchemeEditorCellHeldEvent(new GridSelection.init(i, j)));
   }
+
+  void AddOrEditFighter(Square square, File file) {
+
+    showDialog(context: context, builder: (context) {
+      return NewPlayerDialog(square, file);
+    });
+    // appState.appStateEventSink.add(StartNewSchemeEditEvent('New Game','NG'));
+
+  }
+
+  GridSelection willAccept;
 
   @override
   Widget build(BuildContext context) {
@@ -829,10 +911,77 @@ class _FighterTableFromSchemeState extends State<FighterTableFromScheme> {
                      onTap: () { HandleTap(i, j); },
                      child:
                      SizedBox(
-                          width: boxDim,
-                         height: boxDim,
-                          child: (model.schemeEditorState.schemeEditorGridSelection.compare(i, j) ?
-                          imgWidget.BORDER(model.schemeEditorState.swapMode ? Colors.purpleAccent : Colors.yellow, 3.0) : imgWidget).PADDING(EdgeInsets.all(2))
+                       width: boxDim,
+                       height: boxDim,
+                       child: DragTarget<Square>(
+                         onWillAccept: (square){
+                           willAccept = GridSelection.init(i, j);
+                           return true;
+                         },
+                           onLeave: (square){
+                             setState(() {
+                               willAccept = null;
+                             });
+                           },
+                           onAcceptWithDetails: (square){
+                            Square s = square.data;
+                            data.appStateEventSink.add(SwapSquaresEvent(willAccept));
+                            data.appStateEventSink.add(SchemeEditorCellPressedEvent(willAccept));
+
+                            setState(() {
+                              willAccept = null;
+                            });
+                           },
+                         builder: (context, list1, list2) {
+                           return DragTarget<File>(
+                             onWillAccept: (file){
+                               willAccept = GridSelection.init(i, j);
+                               return true;
+                             },
+                             onLeave: (file){
+                               setState(() {
+                                 willAccept = null;
+                               });
+                             },
+                             onAcceptWithDetails: (file){
+
+                               AddOrEditFighter(widget.scheme.grid.getSquare(i, j), file.data);
+                               data.appStateEventSink.add(SchemeEditorCellPressedEvent(GridSelection.init(i, j)));
+
+                               setState(() {
+                                 willAccept = null;
+                               });
+                             },
+                             builder: (context, list1, list2){
+
+                               bool dragging = model.schemeEditorState.swapMode;
+                               bool isSelected = model.schemeEditorState.schemeEditorGridSelection.compare(i, j);
+                                bool isAccepting = willAccept != null && willAccept.compare(i,j);
+
+                                Widget content = SizedBox(
+                                   width: boxDim,
+                                   height: boxDim,
+                                   child: (
+                                       isSelected ? imgWidget.BORDER(Colors.yellow, 3.0)
+                                      : isAccepting ? imgWidget.BORDER(Colors.purpleAccent, 3.0)
+                                   : imgWidget).PADDING(EdgeInsets.all(2))
+                               );
+
+
+                               return !dragging ? content :
+                               Draggable<Square>(
+                                 onDragStarted: (){
+                                   data.appStateEventSink.add(SchemeEditorCellPressedEvent(GridSelection.init(i, j)));
+                                 },
+                                 feedback: content,
+                                 data: widget.scheme.grid.getSquare(i, j),
+                                 child: content,
+                                 childWhenDragging: Empty(),
+                               );
+                             },
+                           );
+                         }
+                       ),
                      ),
                    );
                  }
@@ -894,5 +1043,7 @@ class _FighterTableFromSchemeState extends State<FighterTableFromScheme> {
 
 
 }
+
+
 
 

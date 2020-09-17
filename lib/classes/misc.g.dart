@@ -123,19 +123,13 @@ GameScheme _$GameSchemeFromJson(Map json) {
         : SchemeMetadata.fromJson((json['meta'] as Map)?.map(
             (k, e) => MapEntry(k as String, e),
           )),
-  )
-    ..roster = (json['roster'] as List)
-        ?.map((e) => e == null
-            ? null
-            : FighterScheme.fromJson((e as Map)?.map(
-                (k, e) => MapEntry(k as String, e),
-              )))
-        ?.toList()
-    ..grid = json['grid'] == null
-        ? null
-        : SelectGrid.fromJson((json['grid'] as Map)?.map(
-            (k, e) => MapEntry(k as String, e),
-          ));
+  )..roster = (json['roster'] as List)
+      ?.map((e) => e == null
+          ? null
+          : FighterScheme.fromJson((e as Map)?.map(
+              (k, e) => MapEntry(k as String, e),
+            )))
+      ?.toList();
 }
 
 Map<String, dynamic> _$GameSchemeToJson(GameScheme instance) {
@@ -149,43 +143,6 @@ Map<String, dynamic> _$GameSchemeToJson(GameScheme instance) {
 
   writeNotNull('meta', instance.meta?.toJson());
   writeNotNull('roster', instance.roster?.map((e) => e?.toJson())?.toList());
-  writeNotNull('grid', instance.grid?.toJson());
-  return val;
-}
-
-SelectGrid _$SelectGridFromJson(Map json) {
-  return SelectGrid()
-    ..selectGrid = (json['selectGrid'] as List)
-        ?.map((e) => (e as List)
-            ?.map((e) => e == null
-                ? null
-                : Square.fromJson((e as Map)?.map(
-                    (k, e) => MapEntry(k as String, e),
-                  )))
-            ?.toList())
-        ?.toList()
-    ..dim = json['dim'] == null
-        ? null
-        : Dimensions.fromJson((json['dim'] as Map)?.map(
-            (k, e) => MapEntry(k as String, e),
-          ));
-}
-
-Map<String, dynamic> _$SelectGridToJson(SelectGrid instance) {
-  final val = <String, dynamic>{};
-
-  void writeNotNull(String key, dynamic value) {
-    if (value != null) {
-      val[key] = value;
-    }
-  }
-
-  writeNotNull(
-      'selectGrid',
-      instance.selectGrid
-          ?.map((e) => e?.map((e) => e?.toJson())?.toList())
-          ?.toList());
-  writeNotNull('dim', instance.dim?.toJson());
   return val;
 }
 
@@ -217,7 +174,9 @@ Square _$SquareFromJson(Map json) {
         : FighterScheme.fromJson((json['fighter'] as Map)?.map(
             (k, e) => MapEntry(k as String, e),
           )),
-  );
+  )
+    ..x = json['x'] as int
+    ..y = json['y'] as int;
 }
 
 Map<String, dynamic> _$SquareToJson(Square instance) {
@@ -229,6 +188,8 @@ Map<String, dynamic> _$SquareToJson(Square instance) {
     }
   }
 
+  writeNotNull('x', instance.x);
+  writeNotNull('y', instance.y);
   writeNotNull('fighter', instance.fighter?.toJson());
   return val;
 }

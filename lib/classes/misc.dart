@@ -233,6 +233,8 @@ class GameScheme
   SchemeMetadata meta = new SchemeMetadata();
 
   List<FighterScheme> roster;
+
+  @JsonKey(ignore: true)
   SelectGrid grid;
 
   Image GetGameImage()
@@ -313,13 +315,19 @@ class GameScheme
     return meta;
   }
 
+  void AddFighterToSquare(FighterScheme f, Square square) {
+    _AddFighterToRoster(f);
+    square.fighter = f;
+    f.SetFighterXY(square.x, square.y);
+  }
+
+
 
 }
 
-@JsonSerializable()
-class SelectGrid {
-  factory SelectGrid.fromJson(Map<String, dynamic> json) => _$SelectGridFromJson(json);
-  Map<String, dynamic> toJson() => _$SelectGridToJson(this);
+class SelectGrid { // DOES NOT NEED TO SERIALIZE
+  // factory SelectGrid.fromJson(Map<String, dynamic> json) => _$SelectGridFromJson(json);
+ // Map<String, dynamic> toJson() => _$SelectGridToJson(this);
 
   SelectGrid();
 
@@ -338,7 +346,7 @@ class SelectGrid {
         for(List<Square> row in selectGrid)
           {
             print('len ${row.length}');
-            row.add(new Square.empty());
+            row.add(new Square.empty(selectGrid.indexOf(row), dim.maxCol + 1));
           }
 
         dim.maxCol++;
@@ -356,7 +364,7 @@ class SelectGrid {
       List<Square> list = new List<Square>();
       for(int i = 0; i <= dim.maxCol; i++)
         {
-          list.add(new Square.empty());
+          list.add(new Square.empty(dim.maxRow + 1, i));
         }
 
       selectGrid.add(list);
@@ -399,7 +407,6 @@ class SelectGrid {
       _GridInit(null);
     }
 
-
     while(dim.maxRow < row) {addRow();}
     while(dim.maxCol < col) {addColumn();}
 
@@ -413,8 +420,10 @@ class SelectGrid {
     try{ return selectGrid[x][y]; }
     catch(e) { return null; }
   }
+
+
   void _GridInit(FighterScheme f) {
-    Square squ = (f == null ? Square.empty() : Square(f));
+    Square squ = (f == null ? Square.empty(0,0) : Square(f));
 
     selectGrid = [ [squ] ];
     dim.init();
@@ -469,6 +478,8 @@ class SelectGrid {
     if(squ2.fighter != null) squ2.fighter.SetFighterXY(sel1.x, sel1.y);
   }
 
+
+
 }
 
 @JsonSerializable()
@@ -476,8 +487,8 @@ class Dimensions{
   factory Dimensions.fromJson(Map<String, dynamic> json) => _$DimensionsFromJson(json);
   Map<String, dynamic> toJson() => _$DimensionsToJson(this);
 
-  int maxRow;
-  int maxCol;
+  int maxRow = 0;
+  int maxCol = 0;
 
   Dimensions.empty();
   Dimensions(this.maxRow, this.maxCol);
@@ -497,17 +508,19 @@ class Dimensions{
 
 @JsonSerializable()
 class Square{
+  int x;
+  int y;
+
   factory Square.fromJson(Map<String, dynamic> json) => _$SquareFromJson(json);
   Map<String, dynamic> toJson() => _$SquareToJson(this);
 
-  Square.empty();
+  Square.empty(this.x, this.y);
   Square(this.fighter);
 
   Image GetImage(double opacityIfBlank)
   {
     return fighter != null ? fighter.GetFighterImage() : Image.asset(Assets.DEFAULT_SQUARE, color: Color.fromRGBO(0, 0, 0, opacityIfBlank),);
   }
-
 
   FighterScheme fighter;
 

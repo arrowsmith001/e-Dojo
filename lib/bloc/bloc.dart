@@ -181,15 +181,25 @@ class DataBloc extends Bloc {
             if(event is SchemeEditorCellHeldEvent)
             {
               model.schemeEditorState.TrySelectCell(event.gridSelection);
-              model.schemeEditorState.ToggleSwapMode(event.gridSelection);
+              model.schemeEditorState.ToggleSwapMode();
               _appStateSink.add(AppStateState(model));
             }
 
             if(event is FighterAddedToSchemeEvent)
             {
-              await model.schemeEditorState.AddFighterToSchemeInEditor(event.map);
+              await model.schemeEditorState.AddFighterToSchemeInEditor(event.map, event.square);
               _appStateSink.add(AppStateState(model));
             }
+            if(event is ToggleSwapModeEvent)
+              {
+                model.schemeEditorState.ToggleSwapMode();
+                _appStateSink.add(AppStateState(model));
+              }
+            if(event is SwapSquaresEvent)
+              {
+                model.schemeEditorState.schemeInEditor.grid.Swap(model.schemeEditorState.schemeEditorGridSelection, event.gridRef);
+                _appStateSink.add(AppStateState(model));
+              }
             if(event is FighterEditedInSchemeEvent)
             {
               await model.schemeEditorState.EditFighter(event.fighter, event.map);

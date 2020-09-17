@@ -1,5 +1,7 @@
 
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:edojo/classes/misc.dart';
 import 'package:path_provider/path_provider.dart';
@@ -21,40 +23,13 @@ class StorageManager{
     return appDir;
   }
 
-
+  /// Icon id to icon file lookup
   Map<String, File> cachedIcons = {};
+
   Map<String, File> cachedDPs = {};
 
   Map<String, GameScheme> cachedSchemes = {}; // TODO Put to file
 
-
-  void CacheData(dynamic data, CacheType type) {
-    switch(type)
-    {
-      case CacheType.gameSchemes:
-        data = data as GameScheme;
-        if(!cachedSchemes.containsKey(data.meta.schemeID))
-        {
-          cachedSchemes.addAll({data.meta.schemeID : data});
-        }
-        break;
-
-      case CacheType.icons:
-        data = data as File;
-        String iconId = GetFileName(data);
-        if(!cachedIcons.containsKey(iconId))
-        {
-          cachedSchemes.addAll({iconId : data});
-        }
-        break;
-
-      case CacheType.dps:
-        // TODO: Handle this case.
-        break;
-    }
-
-
-  }
 
   void ClearCache() {
     cachedSchemes.clear();
@@ -62,22 +37,13 @@ class StorageManager{
     cachedDPs.clear();
   }
 
-  String GetFileName(File file) {
-    String fileNameWithExt = file.path.split('/').last;
-    String nameOnly = fileNameWithExt.split('.').first;
-    return nameOnly;
-  }
 
 }
 
-enum CacheType{
-  icons, dps,
-  gameSchemes,
-}
 
 Future<File> CacheImageFileForUpload(String folderName, File file) async {
 
-  Directory tempDir = StorageManager.instance.appDir == null ? await StorageManager.instance.GetTempDir() : StorageManager.instance.appDir;
+  Directory tempDir = await getTemporaryDirectory();
   String tempPath = tempDir.path;
 
   String imgId = GetUniqueIdentifier();
@@ -85,8 +51,21 @@ Future<File> CacheImageFileForUpload(String folderName, File file) async {
   File newFile = new File(tempPath + '/$folderName/' + imgId + '.png');
   if(!(await newFile.exists())) await newFile.create(recursive: true);
 
-  newFile = await file.copy(tempPath + '/$folderName/' + imgId + '.png');
-  await file.delete();
+  if(file.path.split('.').last != 'png'){
+
+    bool exists = await file.exists();
+    print('file exists: '+exists.toString());
+
+    newFile.writeAsBytes(await file.readAsBytes());
+  }
+  else
+    {
+
+      newFile = await file.copy(tempPath + '/$folderName/' + imgId + '.png');
+    }
+
+
+  // await file.delete();
 
   return newFile;
 }
