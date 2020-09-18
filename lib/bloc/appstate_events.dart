@@ -138,8 +138,9 @@ class ChallengeExitedEvent extends AppStateEvent {
 }
 
 class FighterSelectedEvent extends AppStateEvent {
-  FighterSelectedEvent(this.fighter, this.playerNum, this.fighterNum);
+  FighterSelectedEvent(this.fighter, this.varString, this.playerNum, this.fighterNum);
   final FighterScheme fighter;
+  final String varString;
   final int playerNum;
   final int fighterNum;
 }

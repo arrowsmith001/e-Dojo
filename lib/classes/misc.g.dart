@@ -282,6 +282,12 @@ ChallengeStatus _$ChallengeStatusFromJson(Map json) {
               : FighterScheme.fromJson((e as Map)?.map(
                   (k, e) => MapEntry(k as String, e),
                 ))),
+    )
+    ..player1Variants = (json['player1Variants'] as Map)?.map(
+      (k, e) => MapEntry(k as String, e as String),
+    )
+    ..player2Variants = (json['player2Variants'] as Map)?.map(
+      (k, e) => MapEntry(k as String, e as String),
     );
 }
 
@@ -300,6 +306,8 @@ Map<String, dynamic> _$ChallengeStatusToJson(ChallengeStatus instance) {
       instance.player1Fighters?.map((k, e) => MapEntry(k, e?.toJson())));
   writeNotNull('player2Fighters',
       instance.player2Fighters?.map((k, e) => MapEntry(k, e?.toJson())));
+  writeNotNull('player1Variants', instance.player1Variants);
+  writeNotNull('player2Variants', instance.player2Variants);
   return val;
 }
 

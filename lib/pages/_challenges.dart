@@ -499,6 +499,11 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
       DataModel dm = snapshot.data.model;
       GameScheme scheme = dm.challengeState.GetScheme();
 
+      // TODO Introduce and make changeable these two variables
+      // Have readystate determine challenge page state
+     bool isP1Ready = widget.ch.state.p1Ready;
+     bool isP2Ready = widget.ch.state.p2Ready;
+
       Image schemeImg = widget.ch.meta.schemeImg;
       int maxFighters = widget.ch.meta.maxFighters;
 
@@ -511,7 +516,7 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
       bool isP2 = widget.ch.meta.player2.userName == dm.user.meta.userName;
 
       List<Widget> p1ColChildren = new List<Widget>();
-      p1ColChildren.add(Text(widget.ch.meta.player1.userName).FLEX(0));
+      p1ColChildren.add(Text(widget.ch.meta.player1.userName, textAlign: TextAlign.end,).FLEX(0));
       for(int i = 0; i < maxFighters; i++){
         p1ColChildren.add(FighterEntry(this, 1, i, isP1).EXPANDED());
       }
@@ -525,11 +530,15 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
       return SafeArea(
         child: Scaffold(
          appBar: MyAppbar(
-           title:
-           schemeImg.image == null ? Text(widget.ch.meta.schemeName, style: TextStyle(color: Colors.white),)
-            : Image(image: schemeImg.image, fit: BoxFit.fitHeight, height: 45),
+           title: Center(child:
+           Row(
+             mainAxisAlignment: MainAxisAlignment.spaceAround,
+               children: [
+             widget.ch.meta.player1.GetImage().SIZED(height: 50, width: 50).FLEXIBLE(),
+             scheme.meta.iconImg.FLEXIBLE(),
+             widget.ch.meta.player2.GetImage().SIZED(height: 50, width: 50).FLEXIBLE() ])),
            actions: [
-
+            IconButton(icon: Icon(Icons.more_vert, color: Colors.white), onPressed: () {  },).PADDING(EdgeInsets.fromLTRB(5, 0,0,0))
            ],
          ),
 
@@ -550,14 +559,6 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
                    )
                        .EXPANDED(),
 
-                   // ListView.builder(
-                   //     shrinkWrap: true,
-                   //     itemCount: maxFighters,
-                   //     itemBuilder: (context, i){
-                   //       return FighterEntry(this, 2, i, isP2);
-                   //     }
-                   // )
-                   //     .EXPANDED()
                  ],
                )
              ).FLEX(1),
@@ -577,10 +578,16 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
                    )
                ),).FLEX(2),
 
-             RaisedButton(
-               onPressed: () {  },
-               child: Text('READY'),
-             ).FLEX(0)
+             Row(
+               children: [
+                 Text('P1').EXPANDED(),
+                 Text('P2').EXPANDED(),
+                 RaisedButton(
+                   onPressed: () {  },
+                   child: Text('READY'),
+                 ).EXPANDED()
+               ]
+             )
 
            ],
          ).MY_BACKGROUND_CONTAINER(),
@@ -628,31 +635,7 @@ class _FighterEntryState extends State<FighterEntry> {
 
         bool selected = (widget.isUser && widget.fighterNum == dm.challengeState.entrySelection);
 
-        return DragTarget<Square>(
-
-          onWillAccept: (square){
-            setState(() {
-              willAccept = widget.isUser;
-            });
-
-            return widget.isUser;
-          },
-          onAccept: (square){
-            setState(() {
-              willAccept = false;
-            });
-
-            print('fighterSelectedEvent FIRED: ' + square.fighter.fighterName + ' ' + widget.playerNum.toString() + ' ' + widget.fighterNum.toString());
-            data.appStateEventSink.add(FighterSelectedEvent(square.fighter, widget.playerNum, widget.fighterNum));
-
-          },
-          onLeave: (square){
-          setState(() {
-            willAccept = false;
-          });
-          },
-          builder: (context, listOfSquares, listDynamic) =>
-              StreamBuilder<AppStateState>(
+        return StreamBuilder<AppStateState>(
             stream: data.appStateStream,
             initialData: new AppStateState(data.model),
             builder: (context, snapshot) {
@@ -660,45 +643,59 @@ class _FighterEntryState extends State<FighterEntry> {
               double height = 50;
 
               FighterScheme fighter = snapshot.data.model.challengeState.GetFighter(widget.playerNum, widget.fighterNum);
+              String variant = snapshot.data.model.challengeState.GetVariant(widget.playerNum, widget.fighterNum);
 
-              Widget text = FittedBox(child: AutoSizeText(fighter == null ? 'ENTER YOUR FIGHTER' : fighter.fighterName, maxLines: 2, maxFontSize: 40, minFontSize: 20, textAlign: TextAlign.center,)
-                  .PADDING(EdgeInsets.symmetric(horizontal: 15, vertical: 20)), fit: BoxFit.fitWidth).SIZED(height: height).EXPANDED();
-              Widget image = fighter == null ? Empty() : FittedBox(fit: BoxFit.fill, child: fighter.GetFighterImage()).SIZED(width: height, height: height);
+              Widget text = FittedBox(
+                  child: AutoSizeText.rich(
+                    TextSpan(children: [
+                      TextSpan(text: fighter == null ? widget.isUser ? 'SELECT FIGHTER' : '' : fighter.fighterName),
+                      TextSpan(text: variant == null ? '' : '\n' + variant, style: TextStyle(fontSize: 10))
+                    ] ),
+                    maxLines: 2,
+                    maxFontSize: 50,
+                    minFontSize: 10,
+                    textAlign: TextAlign.center,)
+                      .PADDING(EdgeInsets.symmetric(horizontal: 15, vertical: 10)), fit: BoxFit.fitHeight)
+                  .SIZED(height: height)
+                  .EXPANDED();
+
+              Widget image = fighter == null ? Empty() : FittedBox(fit: BoxFit.fitWidth, child: fighter.GetFighterImage()).SIZED(width: height, height: height);
+
+              Widget content = Container(
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      widget.playerNum == 1 ? text : image,
+                      widget.playerNum == 1 ? image : text,
+                    ]
+                ),
+              );
 
               return Column(
                 children: [
                   Container(
                     color: !widget.isUser ? Colors.grey.withAlpha(50) : Colors.transparent,
                     child: InkWell(
-                        onTap: (){
-                          if(!widget.isUser) return;
-                            widget.parentState.togglePlayerSelect();
-                            data.appStateEventSink.add(FighterEntrySelectionEvent(widget.fighterNum));
-                          }, // TODO Touching selects field for entry (if on player side)
-                          child: DottedBorder(
-                            color: !widget.isUser ? Colors.blueGrey : willAccept ? Colors.yellow : Colors.white,
-                            strokeWidth: selected ? 5 : 2,
-                            dashPattern: [
-                              fighter != null ? 0.1 : 5
-                            ],
-                            borderType: BorderType.RRect,
-                            radius: Radius.circular(5),
-                              child: Container(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    widget.playerNum == 1 ? text : image,
-                                    widget.playerNum == 1 ? image : text,
-                                  ]
-                                ),
-                              ),
-                          ),
+                      onTap: (){
+                        if(!widget.isUser) return;
+                        widget.parentState.togglePlayerSelect();
+                        data.appStateEventSink.add(FighterEntrySelectionEvent(widget.fighterNum));
+                      }, // TODO Touching selects field for entry (if on player side)
+                      child: DottedBorder(
+                        color: !widget.isUser ? Colors.blueGrey : willAccept ? Colors.yellow : Colors.white,
+                        strokeWidth: selected ? 5 : 2,
+                        dashPattern: [
+                          fighter != null ? 0.1 : 5
+                        ],
+                        borderType: BorderType.RRect,
+                        radius: Radius.circular(5),
+                        child: content
                         ),
-                  ).EXPANDED(),
+                      ),
+                    ).EXPANDED(),
                 ],
               ).PADDING(EdgeInsets.all(4));
             }
-          ),
         );
       }
     );
@@ -756,17 +753,43 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
     //_scrollController.animateTo(j*boxDim, duration: Duration(milliseconds: 200), curve: Curves.easeIn);
     if(state.challengeInProgress.IsFighterInSelections(squareSelected, pNum))
       {
-        // TODO Option to change variation
         data.appStateEventSink.add(FighterEntrySelectionEvent(state.challengeInProgress.IndexOf(fighter, pNum)));
         data.appStateEventSink.add(FighterUnselectedEvent(fighter, pNum));
       }
     else
       {
-        data.appStateEventSink.add(FighterSelectedEvent(fighter, pNum, fighterSelected));
-        data.appStateEventSink.add(FighterEntrySelectionEvent(null));
+        // TODO Option to change variation
+
+        // Open alert box
+        // Select variation from options (or none)
+        // Send event to select/equip variant
+        // Reflect change in Fighter Entry
+
+        if(fighter.HasVariants())
+          {
+
+            showDialog<String>(context: context, builder: (context) {
+              return VariantDialog(fighter); }).then((varString) {
+
+                if(varString != null){
+                  if(varString != ''){
+                    data.appStateEventSink.add(FighterSelectedEvent(fighter, varString, pNum, fighterSelected));
+                    data.appStateEventSink.add(FighterEntrySelectionEvent(null));
+                  }else
+                    {
+
+                      data.appStateEventSink.add(FighterSelectedEvent(fighter, null, pNum, fighterSelected));
+                      data.appStateEventSink.add(FighterEntrySelectionEvent(null));
+                    }
+
+                }
+            });
+          }else
+            {
+              data.appStateEventSink.add(FighterSelectedEvent(fighter, null, pNum, fighterSelected));
+              data.appStateEventSink.add(FighterEntrySelectionEvent(null));
+            }
       }
-
-
 
   }
 
@@ -799,9 +822,12 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
         );
 
         // OPTION 2: Image representation
-        Widget imgWidget = FittedBox(
-            fit: BoxFit.fill,
-            child: square.GetImage(0.7)
+        Widget imgWidget = SizedBox(
+          width: 50, height: 50,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: square.GetImage(0.7)
+          )
         );
 
         rowContents.add(
@@ -920,6 +946,72 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
       );
   }
 }
+
+// Return varString of variant, Return null for 'cancel'
+class VariantDialog extends StatefulWidget {
+  VariantDialog(this.fighter);
+  FighterScheme fighter;
+
+  @override
+  _VariantDialogState createState() => _VariantDialogState();
+}
+
+class _VariantDialogState extends State<VariantDialog> {
+  @override
+  Widget build(BuildContext context) {
+
+    List<Widget> colChildren = new List<Widget>();
+
+    colChildren.add(Empty().EXPANDED());
+
+    // Add variant buttons
+  for(int i = 0; i < widget.fighter.variants.length; i++){
+    colChildren.add(
+        new VariantEntry(widget.fighter.variants[i], widget.fighter.variants[i], Colors.indigo[700]).PADDING(EdgeInsets.symmetric(vertical: 10)));
+  }
+
+
+    colChildren.add(new VariantEntry('No variant specified', '', Colors.indigo[900]).PADDING(EdgeInsets.symmetric(vertical: 10)));
+
+    colChildren.add(new VariantEntry('CANCEL', null, Colors.red[900]).PADDING(EdgeInsets.symmetric(vertical: 10)));
+
+
+    return Dialog(
+
+      backgroundColor: Colors.transparent,
+      child: Center(
+        child: Column(
+          children: colChildren
+        ),
+      ),
+    );
+  }
+}
+
+class VariantEntry extends StatelessWidget {
+  VariantEntry(this.variant, this.value, this.color);
+  String variant;
+  String value;
+  Color color;
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: (){
+        Navigator.of(context).pop(value);
+      },
+      child: Container(
+        height: 60,
+        child: Center(child: AutoSizeText(variant, style: TextStyle(color: Colors.white), minFontSize: 16, maxFontSize: 30).PADDING(EdgeInsets.all(20))),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(5)),
+          color: color
+        ),
+      ),
+    );
+  }
+}
+
+
 
 
 

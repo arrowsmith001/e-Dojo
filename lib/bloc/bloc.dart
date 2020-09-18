@@ -320,7 +320,7 @@ class DataBloc extends Bloc {
           ChallengeStatus currentState = model.challengeState.challengeInProgress.state;
           print('state before: ' + currentState.toJson().toString());
 
-          currentState.SelectFighter(event.fighter, event.playerNum, event.fighterNum);
+          currentState.SelectFighter(event.fighter, event.varString, event.playerNum, event.fighterNum);
           print('state after: ' + currentState.toJson().toString());
 
           String cid = model.challengeState.challengeInProgress.meta.challengeId;

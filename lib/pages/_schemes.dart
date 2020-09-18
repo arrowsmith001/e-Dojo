@@ -429,7 +429,7 @@ class _SchemeEditorState extends State<SchemeEditor> {
                                       onPressed: () {
                                         data.appStateEventSink.add(ToggleSwapModeEvent());
                                       },
-                                      icon: Icon(swapMode ? Icons.pan_tool : Icons.zoom_out_map),
+                                      icon: Icon(swapMode ? Icons.pan_tool : Icons.zoom_out_map, color: Colors.white),
                                     ),
                                     height: 50, width: 50)
                               ],

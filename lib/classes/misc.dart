@@ -577,6 +577,8 @@ class FighterScheme {
     return iconImg != null ? iconImg : Image.asset(Assets.BROKEN_LINK);
   }
 
+  bool HasVariants() { return variants!=null && variants.length > 0; }
+
   // TODO Map to grid position
 }
 
@@ -640,9 +642,9 @@ class Challenge{
     return state.GetFighter(playerNum, fighterNum);
   }
 
-  void SelectFighter(FighterScheme fighter, int playerNum, int fighterNum) {
-    state.SelectFighter(fighter, playerNum, fighterNum);
-  }
+  // void SelectFighter(FighterScheme fighter, int playerNum, int fighterNum) {
+  //   state.SelectFighter(fighter, playerNum, fighterNum);
+  // }
 
   Map<String,FighterScheme> GetMyList(int pNum) {
     switch(pNum)
@@ -690,6 +692,10 @@ class Challenge{
 
   }
 
+  String GetVariant(int playerNum, int fighterNum) {
+    return state.GetVariant(playerNum, fighterNum);
+  }
+
 }
 
 @JsonSerializable()
@@ -706,28 +712,32 @@ class ChallengeStatus {
   Map<String, FighterScheme> player1Fighters;
   Map<String, FighterScheme> player2Fighters;
 
-  void SelectFighter(FighterScheme fighter, int playerNum, int fighterNum) {
+  Map<String, String> player1Variants;
+  Map<String, String> player2Variants;
 
-    String fighterString = 'i' + fighterNum.toString();
+  void SelectFighter(FighterScheme fighter, String varString, int playerNum, int fighterNum) {
 
-    Map<int, FighterScheme> list;
+    String iString = 'i' + fighterNum.toString();
+
     switch(playerNum)
     {
       case 1:
-        if(player1Fighters == null) player1Fighters = {fighterString : fighter};
-        // else if(player2Fighters.containsKey(fighterNum)) player2Fighters[fighterNum] = fighter;
-        // else player2Fighters.addAll({fighterNum : fighter});
-        player1Fighters[fighterString] = fighter;
+        if(player1Fighters == null) player1Fighters = {iString : fighter};
+        else player1Fighters[iString] = fighter;
 
-        //for(String k in player1Fighters.keys)  {   print(k.toString() + player1Fighters[k].fighterName);  }
+          if(player1Variants == null) player1Variants = {iString : varString};
+          else player1Variants[iString] = varString;
+
+
         break;
       case 2:
-        if(player2Fighters == null) player2Fighters = {fighterString : fighter};
-        // else if(player2Fighters.containsKey(fighterNum)) player2Fighters[fighterNum] = fighter;
-        // else player2Fighters.addAll({fighterNum : fighter});
-        player2Fighters[fighterString] = fighter;
+        if(player2Fighters == null) player2Fighters = {iString : fighter};
+        player2Fighters[iString] = fighter;
 
-        //for(String k in player2Fighters.keys)  {   print(k.toString() + player2Fighters[k].fighterName);  }
+          if(player2Variants == null) player2Variants = {iString : varString};
+          else player2Variants[iString] = varString;
+
+
         break;
     }
 
@@ -742,6 +752,7 @@ class ChallengeStatus {
         for(String fs in player1Fighters.keys){
           if(player1Fighters[fs].fighterName == fighter.fighterName){
             player1Fighters[fs] = null;
+            if(player1Variants != null) player1Variants[fs] = null;
             return;
           }
         }
@@ -752,6 +763,7 @@ class ChallengeStatus {
         for(String fs in player2Fighters.keys){
           if(player2Fighters[fs].fighterName == fighter.fighterName){
             player2Fighters[fs] = null;
+            if(player2Variants != null) player2Variants[fs] = null;
             return;
           }
         }
@@ -773,6 +785,20 @@ class ChallengeStatus {
         break;
     }
 
+  }
+
+  String GetVariant(int playerNum, int fighterNum) {
+    switch(playerNum)
+    {
+      case 1:
+        if(player1Variants == null) return null;
+        else return player1Variants['i' + fighterNum.toString()];
+        break;
+      case 2:
+        if(player2Variants == null) return null;
+        else return player2Variants['i' + fighterNum.toString()];
+        break;
+    }
   }
 
 }

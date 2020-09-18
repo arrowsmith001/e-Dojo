@@ -163,12 +163,12 @@ class ChallengeState {
 
   Challenge challengeInProgress;
 
-  void SelectFighter(FighterScheme fighter, int playerNum, int fighterNum) {
-    if(challengeInProgress == null) return;
-
-    challengeInProgress.SelectFighter(fighter,playerNum,fighterNum);
-
-  }
+  // void SelectFighter(FighterScheme fighter, int playerNum, int fighterNum) {
+  //   if(challengeInProgress == null) return;
+  //
+  //   challengeInProgress.SelectFighter(fighter,playerNum,fighterNum);
+  //
+  // }
 
   GameScheme GetScheme() {
     if(challengeInProgress == null) return null;
@@ -220,6 +220,12 @@ class ChallengeState {
       entrySelection = entrySelection % challengeInProgress.meta.maxFighters;
     }
     else entrySelection = fighterNum;
+  }
+
+  String GetVariant(int playerNum, int fighterNum) {
+
+    if(challengeInProgress == null) return null;
+    return challengeInProgress.GetVariant(playerNum, fighterNum);
   }
 
 
