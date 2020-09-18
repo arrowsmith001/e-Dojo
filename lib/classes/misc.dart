@@ -549,7 +549,7 @@ class FighterScheme {
       this.iconImgFile = iconImgFile;
       this.iconImg = Image.file(iconImgFile);
     }
-    else this.iconImg = Image.asset(Assets.DEFAULT_FIGHTER);
+    else this.iconImg = Image.asset(Assets.BROKEN_LINK);
   }
 
   String fighterName;
@@ -652,11 +652,42 @@ class Challenge{
       case 2: return state.player2Fighters;
       break;
     }
+
+    return null;
   }
 
   bool IsMaxChosen(int pNum) {
     if(GetMyList(pNum) == null) return false;
     return GetMyList(pNum).length == meta.maxFighters;
+  }
+
+  bool IsFighterInSelections(Square square, int i) {
+    if(square==null || square.fighter==null || GetMyList(i)==null) return false;
+    FighterScheme fighter = square.fighter;
+
+    List<FighterScheme> list = GetMyList(i).values.toList();
+
+    for(FighterScheme f in list){
+      if(f!=null && fighter.fighterName == f.fighterName) return true;
+    }
+
+    return false;
+
+  }
+
+  int IndexOf(FighterScheme fighter, int pNum) {
+    if(GetMyList(pNum) == null) return null;
+    Map<String, FighterScheme> map = GetMyList(pNum);
+    for(String k in map.keys){
+
+      if(fighter.fighterName == map[k].fighterName){
+        k = k.split('i').last;
+        return int.parse(k);
+      }
+    }
+
+    return null;
+
   }
 
 }
@@ -688,7 +719,7 @@ class ChallengeStatus {
         // else player2Fighters.addAll({fighterNum : fighter});
         player1Fighters[fighterString] = fighter;
 
-        for(String k in player1Fighters.keys)  {   print(k.toString() + player1Fighters[k].fighterName);  }
+        //for(String k in player1Fighters.keys)  {   print(k.toString() + player1Fighters[k].fighterName);  }
         break;
       case 2:
         if(player2Fighters == null) player2Fighters = {fighterString : fighter};
@@ -696,11 +727,37 @@ class ChallengeStatus {
         // else player2Fighters.addAll({fighterNum : fighter});
         player2Fighters[fighterString] = fighter;
 
-        for(String k in player2Fighters.keys)  {   print(k.toString() + player2Fighters[k].fighterName);  }
+        //for(String k in player2Fighters.keys)  {   print(k.toString() + player2Fighters[k].fighterName);  }
         break;
     }
 
 
+  }
+
+  void UnselectFighter(FighterScheme fighter, int playerNum) {
+    switch(playerNum)
+    {
+      case 1:
+        if(player1Fighters == null) return;
+        for(String fs in player1Fighters.keys){
+          if(player1Fighters[fs].fighterName == fighter.fighterName){
+            player1Fighters[fs] = null;
+            return;
+          }
+        }
+
+        break;
+      case 2:
+        if(player2Fighters == null) return;
+        for(String fs in player2Fighters.keys){
+          if(player2Fighters[fs].fighterName == fighter.fighterName){
+            player2Fighters[fs] = null;
+            return;
+          }
+        }
+
+        break;
+    }
   }
 
   FighterScheme GetFighter(int playerNum, int fighterNum) {
@@ -717,6 +774,7 @@ class ChallengeStatus {
     }
 
   }
+
 }
 
 @JsonSerializable()

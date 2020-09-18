@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:edojo/pages/_schemes.dart';
 import 'package:edojo/tools/network.dart';
 import 'package:edojo/tools/storage.dart';
+import 'package:uuid/uuid.dart';
 
 import 'misc.dart';
 
@@ -183,14 +184,23 @@ class ChallengeState {
   Future<void> RefreshChallengeState(ChallengeStatus newState) async {
     if(challengeInProgress == null) return null;
 
-    for(FighterScheme fs in newState.player1Fighters.values)
+    if(newState.player1Fighters!=null && newState.player1Fighters.length > 0)
     {
-      fs.SetImage(await NetworkServiceProvider.instance.netService.GetNetworkImage(fs.iconImgId));
+      for(FighterScheme fs in newState.player1Fighters.values)
+      {
+        fs.SetImage(await NetworkServiceProvider.instance.netService.GetNetworkImage(fs.iconImgId));
+      }
     }
-    for(FighterScheme fs in newState.player2Fighters.values)
+
+    if(newState.player2Fighters!=null && newState.player2Fighters.length > 0)
     {
-      fs.SetImage(await NetworkServiceProvider.instance.netService.GetNetworkImage(fs.iconImgId));
+      for(FighterScheme fs in newState.player2Fighters.values)
+      {
+        fs.SetImage(await NetworkServiceProvider.instance.netService.GetNetworkImage(fs.iconImgId));
+      }
     }
+
+
 
     challengeInProgress.state = newState; // TODO Pick ONLY the stuff that's changed
 
@@ -201,15 +211,17 @@ class ChallengeState {
     challengeInProgress.scheme = scheme;
   }
 
-  int entrySelection;
+  int entrySelection = 0;
   void ChangeEntrySelection(int fighterNum) {
 
     if(fighterNum == null && entrySelection != null){
       // TODO Get next blank entry (just increases for now)
       entrySelection++;
+      entrySelection = entrySelection % challengeInProgress.meta.maxFighters;
     }
     else entrySelection = fighterNum;
   }
+
 
 
 
@@ -256,6 +268,7 @@ class SchemeEditorState
 
     schemeInEditor = GameScheme.initialGrid(new SchemeMetadata.newScheme(info.name, info.nickname, imgId), 2, 6);
     schemeInEditor.SetImage(file);
+    schemeInEditor.meta.maxFighters = info.teamSize;
 
     schemeEditorGridSelection = new GridSelection();
     swapMode = false;
@@ -348,22 +361,33 @@ class SchemeEditorState
 
   Future<void> EditFighter(FighterScheme fighter, Map<String, dynamic> map) async {
 
+    //print('Fighter img path: ' + fighter.iconImgFile.path);
+
     String name = map['Name'];
-
-    String imgId = null;
     File file = map['Icon'];
+    int vars = map['Variations'] as int;
 
-    File newFile = await CacheImageFileForUpload('icons',file);
-    map['Icon'] = newFile;
-    imgId = newFile.path.split('/').last.split('.').first;
+    String imgId = map['Icon'].path.split('/').last.split('.').first;
 
+    if(file != fighter.iconImgFile) // If file is new...
+      {
+        print('NEW file...');
+        File newFile = await CacheImageFileForUpload('icons',file);
+        map['Icon'] = newFile;
+        imgId = newFile.path.split('/').last.split('.').first;
+      }
 
-    List<String> variants;
+    List<String> variants = new List<String>();
+    for(int i = 0; i < vars; i++){
+      String k = 'Variant$i';
+      String variant = map[k];
+      variants.add(variant);
+    }
 
-    fighter.fighterName = name;
-    fighter.iconImgId = imgId;
     fighter.SetImage(map['Icon']);
+    fighter.fighterName = name;
     fighter.variants = variants;
+    fighter.iconImgId = imgId;
 
     // TODO Validate name for conflicts
   }

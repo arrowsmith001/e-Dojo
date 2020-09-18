@@ -4,6 +4,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:edojo/widgets/my_alert_dialog.dart';
 import 'package:edojo/widgets/my_app_bar.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:edojo/bloc/appstate_events.dart';
@@ -153,11 +154,7 @@ class _SchemesPageState extends State<SchemesPage> with SingleTickerProviderStat
 
                               }).EXPANDED(),
 
-                          RaisedButton(onPressed: () {
-                            Navigator.of(context).push(MaterialPageRoute<NewGameInfo>(builder: (context) => NewGameDialog()))
-                                .then((value) => value == null ? null : NavigateToNewSchemeEdit(value));
-                          },
-                            child: Text('GO TO SCHEME EDITOR'),)
+
 
 
                         ]
@@ -173,6 +170,14 @@ class _SchemesPageState extends State<SchemesPage> with SingleTickerProviderStat
 //              ),
                 ).MY_BACKGROUND_CONTAINER(),
               ),
+
+            floatingActionButton: FloatingActionButton(
+              child: Icon(Icons.add),
+              onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute<NewGameInfo>(builder: (context) => NewGameDialog()))
+                .then((value) => value == null ? null : NavigateToNewSchemeEdit(value)); },
+
+            ),
             )
           ;
         });
@@ -259,9 +264,10 @@ class _PublishedSchemeBrowserState extends State<PublishedSchemeBrowser> {
 
 
 class NewGameInfo {
-  NewGameInfo(this.name, this.nickname, this.icon);
+  NewGameInfo(this.name, this.nickname, this.teamSize, this.icon);
   String name;
   String nickname;
+  int teamSize;
   File icon;
 }
 
@@ -317,10 +323,12 @@ class _SchemeEditorState extends State<SchemeEditor> {
 
 
   void SaveThisScheme(User user, GameScheme scheme) {
-
     net.SaveSchemeToEdits(user, scheme);
+  }
 
-
+  Future<void> SaveAndUploadScheme(User user, GameScheme scheme) async {
+    await net.SaveSchemeToEdits(user, scheme);
+    net.UploadScheme(user, scheme);
   }
 
   @override
@@ -344,13 +352,33 @@ class _SchemeEditorState extends State<SchemeEditor> {
         bool ready = model != null && scheme != null && square != null;
 
         if(!ready) return Center(child: SizedBox(width: 50, height: 50, child: CircularProgressIndicator(),),);
-
+       // IconButton(icon: Icon(Icons.save, color: Colors.white,), onPressed: () { SaveThisScheme(model.user, scheme); },)
         return Scaffold(
           appBar: MyAppbar(
             leading: Icon(Icons.arrow_back, color: Colors.white,),
             actions: <Widget>[
-              IconButton(icon: Icon(Icons.save, color: Colors.white,), onPressed: () { SaveThisScheme(model.user, scheme); },)
-            ] ,
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, color: Colors.white,),
+                onSelected: (value){
+                  switch (value) {
+                    case 'Save':
+                      SaveThisScheme(model.user, scheme);
+                      break;
+                    case 'Save & Upload':
+                      SaveAndUploadScheme(model.user, scheme);
+                      break;
+                  }
+                },
+                itemBuilder: (BuildContext context) {
+                  return {'Save', 'Save & Upload'}.map((String choice) {
+                    return PopupMenuItem<String>(
+                      value: choice,
+                      child: Text(choice, style: TextStyle(color: Colors.black)),
+                    );
+                  }).toList();
+                },
+              ),
+            ],
             title: Text(
                 scheme == null ? '' : scheme.meta.gameName,
                 style: TextStyle(color: Colors.white, fontSize: 20)),
@@ -516,6 +544,7 @@ class _SchemeEditorState extends State<SchemeEditor> {
 }
 
 
+
 }
 
 class HowToAddFighterDialog extends StatelessWidget {
@@ -554,17 +583,21 @@ class _NewGameDialogState extends State<NewGameDialog> {
 
   Future<void> OnNewSchemeEditStartedDetailsSaved(Map<String, dynamic> map) async {
 
-    List list = map['Icon'];
-    File file = (list == null || list.isEmpty ? null : list[0]);
-    Navigator.of(context).pop(NewGameInfo(map['Name'], map['Nickname'], file));
+    Navigator.of(context).pop(NewGameInfo(map['Name'], map['Nickname'], map['TeamSize'], map['Icon']));
   }
 
   String helperText1 = 'The name of this game.';
   String helperText2 = 'A short identifier/abbreviation of this game\'s name.';
-  String helperText3 = 'An icon to associate with your game.';
+  String helperText3 = 'The icon to associate with your game.';
+  String helperText4 = 'Number of fighters in a standard team. For team fighters only (if unsure, leave as 1).';
+
+  File iconFile;
+  Image iconImage;
 
   @override
   Widget build(BuildContext context) {
+
+    Widget imgWidget = SizedBox(height: 75, width: 100, child: FittedBox(child: iconImage, fit: BoxFit.fitHeight));
 
     return AlertDialog(
       backgroundColor: Color.fromRGBO(29, 50, 89, 1.0),
@@ -577,39 +610,76 @@ class _NewGameDialogState extends State<NewGameDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children:<Widget>[
+
+                InkWell(
+                  onTap: (){
+                    ImagePicker.platform.pickImage(source: ImageSource.gallery)
+                        .then((value) async {
+                          if(value == null || value.path == null) return;
+                      iconFile = await new File(value.path);
+                       setState(() {
+                         iconImage = Image.file(iconFile);
+                       });
+                    });
+                  },
+                  child: Center(
+                    child: iconImage != null ? imgWidget
+                    : Container(
+                      width: 75, height: 75, color: Colors.grey
+                    )
+                  ),
+                ),
+
                 FormBuilderTextField(
                     attribute: 'Name',
                     initialValue: '',
                     decoration: InputDecoration(
                         labelText: 'Name',
                         helperText: helperText1,
+                        helperMaxLines: 3,
                         filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0)),
                     validators: [
                       FormBuilderValidators.required(errorText:'Required field')
                     ]
-                ),
-                Padding(padding: EdgeInsets.all(10),),
+                ).FLEXIBLE(),
+
+                Padding(padding: EdgeInsets.all(10),).FLEXIBLE(),
+
                 FormBuilderTextField(
                     attribute: 'Nickname',
                     initialValue: '',
                     decoration: InputDecoration(
                         labelText: 'Nickname',
                         helperText: helperText2,
+                        helperMaxLines: 3,
                         filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0)),
                     validators: [
                       FormBuilderValidators.required(errorText:'Required field')
                     ]
-                ),
-                Padding(padding: EdgeInsets.all(10),),
-                FormBuilderImagePicker(
-                  initialValue: [],
-                  maxImages: 1,
-                  imageWidth: 50,
-                  imageHeight: 50,
-                  decoration: InputDecoration(filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0), helperText: helperText3),
-                  labelText: 'Icon (optional)',
-                  attribute: 'Icon',
-                ),
+                ).FLEXIBLE(),
+
+                Padding(padding: EdgeInsets.all(10),).FLEXIBLE(),
+
+                FormBuilderTouchSpin(
+                    attribute: 'TeamSize',
+                    initialValue: 1,
+                    min: 1, max: 3, step: 1,
+
+                  decoration: InputDecoration(
+                      labelText: 'Team size',
+                      helperMaxLines: 3,
+                      helperText: helperText4,
+                      filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0)),)
+
+                // FormBuilderImagePicker(
+                //   initialValue: [],
+                //   maxImages: 1,
+                //   imageWidth: 50,
+                //   imageHeight: 50,
+                //   decoration: InputDecoration(filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0), helperText: helperText3),
+                //   labelText: 'Icon (optional)',
+                //   attribute: 'Icon',
+                // ).FLEXIBLE(),
 
 
               ],
@@ -633,8 +703,11 @@ class _NewGameDialogState extends State<NewGameDialog> {
             'ADD',
           ),
           onPressed: () {
-            if (_fbKey.currentState.saveAndValidate()) {
+            if (_fbKey.currentState.saveAndValidate() && iconImage!=null) {
               Map<String, dynamic> map = _fbKey.currentState.value;
+
+              map.addAll({'Icon' : iconFile});
+
               OnNewSchemeEditStartedDetailsSaved(map);
             }
           },
@@ -667,10 +740,16 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
   {
     super.initState();
     variantNum = widget.square.fighter == null || widget.square.fighter.variants == null ? 0 : widget.square.fighter.variants.length;
+
+    iconImgFile = widget.iconFile;
+    iconImg = widget.iconFile == null ? Image.asset(Assets.BROKEN_LINK) : Image.file(widget.iconFile);
   }
 
   String helperText = 'List any variations/equippable items that a fighter can take into battle.';
   int variantNum = 0;
+
+  Image iconImg;
+  File iconImgFile;
 
   void ChangeListNum(int to)
   {
@@ -682,7 +761,7 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
 
   Future<void> ProcessFighterForm(Map<String, dynamic> map) async {
 
-    map['Icon'] = widget.iconFile;
+    map['Icon'] = iconImgFile;
 
     if(widget.square.fighter == null) data.appStateEventSink.add(FighterAddedToSchemeEvent( map, widget.square));
     else {data.appStateEventSink.add(FighterEditedInSchemeEvent(widget.square.fighter, map));}
@@ -693,100 +772,99 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
   @override
   Widget build(BuildContext context) {
 
+    List<Widget> variantChildren = [
+
+      // Icon image
+      InkWell(
+          onTap: (){
+            ImagePicker.platform.pickImage(source: ImageSource.gallery)
+                .then((value) async {
+              if(value == null || value.path == null) return;
+              iconImgFile = await new File(value.path);
+              setState(() {
+                iconImg = Image.file(iconImgFile);
+              });
+            });
+          },
+        child: Center(
+          child: SizedBox(
+              child: FittedBox(
+                  fit: BoxFit.fill,
+                  child: iconImg // Image.file(widget.iconFile)
+              ),
+              width: 75,
+              height: 75
+          ),
+        ).FLEXIBLE(),
+      ),
+
+      // Name field
+      FormBuilderTextField(
+          attribute: 'Name',
+          initialValue: widget.square.fighter == null ? '' : widget.square.fighter.fighterName,
+          decoration: InputDecoration(
+              labelText: 'Name',
+              helperText: 'This fighter\'s name.',
+              filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0)),
+          validators: [
+            FormBuilderValidators.required(errorText:'Required field')
+          ]
+      ).FLEXIBLE(),
+
+      // Padding
+      Padding(padding: EdgeInsets.all(10),).FLEXIBLE(),
+
+      FormBuilderTouchSpin(
+          onChanged: (value) { ChangeListNum(value); },
+          min: 0,
+          step: 1,
+          initialValue: variantNum,
+          attribute: 'Variations',
+          decoration: InputDecoration(
+              filled: true,
+              fillColor: Color.fromRGBO(0, 0, 0, 0),
+              labelText: ('Variations (optional)'),
+              helperText: variantNum == 0 ? helperText : null ,
+              helperMaxLines: 3),
+          validators: [
+                (dynamic) => null
+          ]
+      ).FLEXIBLE()
+    ];
+
+    for(int i = 0; i < variantNum; i++){
+      variantChildren.add(
+          FormBuilderTextField(
+        initialValue: widget.square.fighter == null
+            || widget.square.fighter.variants == null
+            || i >= widget.square.fighter.variants.length ? '' : widget.square.fighter.variants[i],
+        attribute: 'Variant$i',
+        decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.transparent,
+            labelText: '${i + 1}',
+            helperText: i + 1 == variantNum ? helperText : null,
+            helperMaxLines: 3),
+        validators: [
+          FormBuilderValidators.required(errorText:'List item should be filled or removed')
+        ],
+      ).FLEXIBLE()
+      );
+    }
+
     return AlertDialog(
-      scrollable: true,
       backgroundColor: Color.fromRGBO(29, 50, 89, 1.0),
           title: Text(widget.square.fighter == null ? 'New Fighter' : 'Edit ${widget.square.fighter.fighterName}'),
-          content: FormBuilder(
-              key: _fbKey,
-              // autovalidate: _resetValidate,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children:<Widget>[
-
-                  // Icon image
-                  Center(
-                    child: SizedBox(
-                        child: FittedBox(
-                            fit: BoxFit.fill,
-                            child: Image.file(widget.iconFile)
-                        ),
-                        width: 100,
-                        height: 100
-                    ),
-                  ).FLEXIBLE(),
-
-                  // Name field
-                  FormBuilderTextField(
-                      attribute: 'Name',
-                      initialValue: widget.square.fighter == null ? '' : widget.square.fighter.fighterName,
-                      decoration: InputDecoration(
-                          labelText: 'Name',
-                          helperText: 'This fighter\'s name.',
-                          filled: true, fillColor: Color.fromRGBO(0, 0, 0, 0)),
-                      validators: [
-                        FormBuilderValidators.required(errorText:'Required field')
-                      ]
-                  ).FLEXIBLE(),
-
-                  // Padding
-                  Padding(padding: EdgeInsets.all(10),),
-
-                  // Variants
-                  Container(
-                    child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children:[
-                          FormBuilderTouchSpin(
-                              onChanged: (value) { ChangeListNum(value); },
-                              min: 0,
-                              step: 1,
-                              initialValue: variantNum,
-                              attribute: 'Variations',
-                              decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Color.fromRGBO(0, 0, 0, 0),
-                                  labelText: ('Variations (optional)'),
-                                  helperText: variantNum == 0 ? helperText : null ,
-                                  helperMaxLines: 3),
-                              validators: [
-                                    (dynamic) => null
-                              ]
-                          ).FLEXIBLE(),
-
-                          // TODO Variants
-                          // Column(
-                          //   children: [
-                          //     ListView.builder(
-                          //         physics: NeverScrollableScrollPhysics(),
-                          //         shrinkWrap: true,
-                          //         itemCount: variantNum,
-                          //         itemBuilder: (context, j) {
-                          //           return FormBuilderTextField(
-                          //             initialValue: widget.square.fighter == null || widget.square.fighter.variants == null ? '' : widget.square.fighter.variants[j],
-                          //             attribute: 'Variant$j',
-                          //             decoration: InputDecoration(
-                          //                 filled: true,
-                          //                 fillColor: Colors.transparent,
-                          //                 labelText: '${j + 1}',
-                          //                 helperText: j + 1 == variantNum ? helperText : null,
-                          //                 helperMaxLines: 3),
-                          //             validators: [
-                          //               FormBuilderValidators.required(errorText:'List item should be filled or removed')
-                          //             ],
-                          //           );
-                          //         }
-                          //     ).FLEXIBLE()
-                          //   ],
-                          // ).EXPANDED(),
-
-                        ]
-                    ),
-                  ),
-
-
-                ],
-              )
+          content: SingleChildScrollView(
+            physics: ScrollPhysics(),
+            child: FormBuilder(
+                key: _fbKey,
+                // autovalidate: _resetValidate,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: variantChildren,
+                )
+            ),
           )
 
           ,
@@ -805,9 +883,8 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
                 widget.square.fighter == null ? 'ADD' : 'SAVE',
               ),
               onPressed: () {
-                if (_fbKey.currentState.saveAndValidate()) {
+                if (_fbKey.currentState.saveAndValidate() && iconImgFile != null) {
                   Map<String, dynamic> map = _fbKey.currentState.value;
-
                   ProcessFighterForm(map);
                 }
               },

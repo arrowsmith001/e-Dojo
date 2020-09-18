@@ -304,7 +304,6 @@ class DataBloc extends Bloc {
 
       if(event is FighterSelectedEvent)
         {
-          if(event.fighterNum == null) return;
 
           if(model.challengeState.challengeInProgress.state == null)
             model.challengeState.challengeInProgress.state = new ChallengeStatus();
@@ -332,6 +331,21 @@ class DataBloc extends Bloc {
           _appStateSink.add(AppStateState(model));
 
         }
+
+      if(event is FighterUnselectedEvent) {
+
+        if(model.challengeState.challengeInProgress.state == null)
+          model.challengeState.challengeInProgress.state = new ChallengeStatus();
+
+        ChallengeStatus currentState = model.challengeState.challengeInProgress.state;
+        currentState.UnselectFighter(event.fighter, event.playerNum);
+
+        String cid = model.challengeState.challengeInProgress.meta.challengeId;
+        // Notify the rtd
+        await NetworkServiceProvider.instance.netService.PushNewChallengeState(cid, currentState);
+
+        _appStateSink.add(AppStateState(model));
+      }
 
       if(event is ChallengeRequestChange)
       {

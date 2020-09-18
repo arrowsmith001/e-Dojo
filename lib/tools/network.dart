@@ -366,6 +366,7 @@ class AllFirebaseNetworkServices extends NetworkServices {
 
           File file = await _ReturnNetworkImageFileOrCachedIfExists(iconImgId);
 
+          f.iconImgFile = file;
           f.iconImg = Image.file(file);
     }
 

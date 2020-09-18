@@ -500,6 +500,7 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
       GameScheme scheme = dm.challengeState.GetScheme();
 
       Image schemeImg = widget.ch.meta.schemeImg;
+      int maxFighters = widget.ch.meta.maxFighters;
 
       if(scheme == null || scheme.grid == null) return CircularProgressIndicator();
 
@@ -509,6 +510,18 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
       bool isP1 = widget.ch.meta.player1.userName == dm.user.meta.userName;
       bool isP2 = widget.ch.meta.player2.userName == dm.user.meta.userName;
 
+      List<Widget> p1ColChildren = new List<Widget>();
+      p1ColChildren.add(Text(widget.ch.meta.player1.userName).FLEX(0));
+      for(int i = 0; i < maxFighters; i++){
+        p1ColChildren.add(FighterEntry(this, 1, i, isP1).EXPANDED());
+      }
+
+      List<Widget> p2ColChildren = new List<Widget>();
+      p2ColChildren.add(Text(widget.ch.meta.player2.userName).FLEX(0));
+      for(int i = 0; i < maxFighters; i++){
+        p2ColChildren.add(FighterEntry(this, 2, i, isP2).EXPANDED());
+      }
+
       return SafeArea(
         child: Scaffold(
          appBar: MyAppbar(
@@ -516,95 +529,61 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
            schemeImg.image == null ? Text(widget.ch.meta.schemeName, style: TextStyle(color: Colors.white),)
             : Image(image: schemeImg.image, fit: BoxFit.fitHeight, height: 45),
            actions: [
-             !animForward ? IconButton(icon: Icon(Icons.clear), onPressed: () { fighterTable.toggleInParent(); }, color: Colors.white) : Empty()
-            // FlatButton(onPressed: () { togglePlayerSelect(); }, child: Text('toggle'),)
+
            ],
          ),
 
-         body: Stack(
+         body: Column(
            children: [
-             // STACK ELEMENT 1: BASE PAGE
-             Column(
-               children: [
-                 Align(
-                     alignment: Alignment.topCenter,
-                     child:  Row(
-                         children: [
+             //Empty().EXPANDED(),
+             Container(
+               child: Row(
+                 children: [
 
-                           Column(
-                               children: [
+                   Column(
+                     children: p1ColChildren,
+                   )
+                       .EXPANDED(),
 
-                                 Text(widget.ch.meta.player1.displayName).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6)).FLEXIBLE(),
+                   Column(
+                     children: p2ColChildren,
+                   )
+                       .EXPANDED(),
 
-                                 ListView.builder(
-                                     itemCount: scheme.meta.maxFighters,
-                                     itemBuilder: (context, i){
-                                       FighterEntry entry = FighterEntry(this, 1, i, isP1);
-                                       return entry.PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6));
+                   // ListView.builder(
+                   //     shrinkWrap: true,
+                   //     itemCount: maxFighters,
+                   //     itemBuilder: (context, i){
+                   //       return FighterEntry(this, 2, i, isP2);
+                   //     }
+                   // )
+                   //     .EXPANDED()
+                 ],
+               )
+             ).FLEX(1),
 
-                                     }).FLEXIBLE(),
-                               ]
-                           ).EXPANDED(),
+             Container(
+               child: Align(
+                 child: fighterTable, alignment: Alignment.center,).PADDING(EdgeInsets.all(5)),
+               decoration: BoxDecoration(
+                 // borderRadius: BorderRadius.circular(20),
+                 // color: Colors.indigo,
+                   border: Border(
+                     top: BorderSide(
+                       color: Colors.white,
+                       width: 2,
+                       style: BorderStyle.solid,
+                     ),
+                   )
+               ),).FLEX(2),
 
-                           Column(
-                               children: [
-
-                                 Text(widget.ch.meta.player2.displayName).PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6)).FLEXIBLE(),
-
-                                 ListView.builder(
-                                     itemCount: scheme.meta.maxFighters,
-                                     itemBuilder: (context, i){
-                                       FighterEntry entry = FighterEntry(this, 2, i, isP2);
-                                       return  entry.PADDING(EdgeInsets.symmetric(horizontal: 10, vertical: 6));
-
-                                     }).FLEXIBLE(),
-                               ]
-                           ).EXPANDED(),
-
-                         ]
-                     )
-
-                 ).MY_BACKGROUND_CONTAINER().EXPANDED(),
-               ],
-             ),
-
-             // STACK ELEMENT 2: Fighter select FighterSelectTableFromScheme(scheme)
-             //!showingFighterSelect ? Empty()
-               AnimatedBuilder(
-               animation: _animController,
-               builder:(context, child){
-                 double val = Math.pow( _animController.value, 3);
-                 return Opacity(
-                   opacity: val,
-                   child: Transform.translate(
-                       offset: Offset(0, (1-val)*200),
-                       child: Column(
-                         children: [
-                           //Empty().EXPANDED(),
-                           Container(
-                             child: Align(
-                               child: fighterTable, alignment: Alignment.center,).PADDING(EdgeInsets.all(5)),
-                             decoration: BoxDecoration(
-                                 // borderRadius: BorderRadius.circular(20),
-                                 // color: Colors.indigo,
-                                 border: Border(
-                                   top: BorderSide(
-                                     color: Colors.white,
-                                     width: 2,
-                                     style: BorderStyle.solid,
-                                   ),
-                                 )
-                             ),).EXPANDED()
-
-                         ],
-                       )),
-
-                 );
-               }
-             ),
+             RaisedButton(
+               onPressed: () {  },
+               child: Text('READY'),
+             ).FLEX(0)
 
            ],
-         ),
+         ).MY_BACKGROUND_CONTAINER(),
 
       )
       );
@@ -686,33 +665,38 @@ class _FighterEntryState extends State<FighterEntry> {
                   .PADDING(EdgeInsets.symmetric(horizontal: 15, vertical: 20)), fit: BoxFit.fitWidth).SIZED(height: height).EXPANDED();
               Widget image = fighter == null ? Empty() : FittedBox(fit: BoxFit.fill, child: fighter.GetFighterImage()).SIZED(width: height, height: height);
 
-              return InkWell(
-
-                  onTap: (){
-                    if(!widget.isUser) return;
-                      widget.parentState.togglePlayerSelect();
-                      data.appStateEventSink.add(FighterEntrySelectionEvent(widget.fighterNum));
-                    }, // TODO Touching selects field for entry (if on player side)
-                    child: DottedBorder(
-                      color: !widget.isUser ? Colors.blueGrey : willAccept ? Colors.yellow : Colors.white,
-                      strokeWidth: selected ? 5 : 2,
-                      dashPattern: [
-                        fighter != null ? 0.1 : 5
-                      ],
-                      borderType: BorderType.RRect,
-                      radius: Radius.circular(5),
-                        child: Container(
-                          color: !widget.isUser ? Colors.grey.withAlpha(50) : Colors.transparent,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              widget.playerNum == 1 ? text : image,
-                              widget.playerNum == 1 ? image : text,
-                            ]
+              return Column(
+                children: [
+                  Container(
+                    color: !widget.isUser ? Colors.grey.withAlpha(50) : Colors.transparent,
+                    child: InkWell(
+                        onTap: (){
+                          if(!widget.isUser) return;
+                            widget.parentState.togglePlayerSelect();
+                            data.appStateEventSink.add(FighterEntrySelectionEvent(widget.fighterNum));
+                          }, // TODO Touching selects field for entry (if on player side)
+                          child: DottedBorder(
+                            color: !widget.isUser ? Colors.blueGrey : willAccept ? Colors.yellow : Colors.white,
+                            strokeWidth: selected ? 5 : 2,
+                            dashPattern: [
+                              fighter != null ? 0.1 : 5
+                            ],
+                            borderType: BorderType.RRect,
+                            radius: Radius.circular(5),
+                              child: Container(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    widget.playerNum == 1 ? text : image,
+                                    widget.playerNum == 1 ? image : text,
+                                  ]
+                                ),
+                              ),
                           ),
                         ),
-                    ),
-                  );
+                  ).EXPANDED(),
+                ],
+              ).PADDING(EdgeInsets.all(4));
             }
           ),
         );
@@ -742,15 +726,11 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
   final DataBloc data = BlocProvider.instance.dataBloc;
   final NetworkServices net = NetworkServiceProvider.instance.netService;
 
-
-
   List<TableRow> tableRows;
 
   double boxDim;
   double localScale = 1;
   double boxDimTemp;
-
-  bool isDraggable = true;
 
   _FighterSelectTableFromScheme(double initDim){
     this.boxDim = initDim;
@@ -768,23 +748,32 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
     });
   }
 
-  void HandleTap(int i, int j, int fighterSelected, int pNum) {
+  void HandleTap(int i, int j, int fighterSelected, int pNum, ChallengeState state) {
     Square squareSelected = widget.scheme.grid.getSquare(i, j);
     FighterScheme fighter = squareSelected.fighter;
-    print('tapped');
+    if(fighter == null) return;
 
     //_scrollController.animateTo(j*boxDim, duration: Duration(milliseconds: 200), curve: Curves.easeIn);
+    if(state.challengeInProgress.IsFighterInSelections(squareSelected, pNum))
+      {
+        // TODO Option to change variation
+        data.appStateEventSink.add(FighterEntrySelectionEvent(state.challengeInProgress.IndexOf(fighter, pNum)));
+        data.appStateEventSink.add(FighterUnselectedEvent(fighter, pNum));
+      }
+    else
+      {
+        data.appStateEventSink.add(FighterSelectedEvent(fighter, pNum, fighterSelected));
+        data.appStateEventSink.add(FighterEntrySelectionEvent(null));
+      }
 
-    widget.toggleInParent();
-    data.appStateEventSink.add(FighterSelectedEvent(fighter, pNum, fighterSelected));
-    data.appStateEventSink.add(FighterEntrySelectionEvent(null));
+
 
   }
 
   void HandleLongPress(int i, int j) {
     print('longpress');
     setState(() {
-      isDraggable = true;
+
     });
   }
 
@@ -826,42 +815,48 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
                   int pNum = model.challengeState.challengeInProgress.meta.player1.userName == model.user.meta.userName ? 1 :
                     model.challengeState.challengeInProgress.meta.player2.userName == model.user.meta.userName ? 2 : 0;
 
+                  bool p1Selected = model.challengeState.challengeInProgress.IsFighterInSelections(square, 1);
+                  bool p2Selected = model.challengeState.challengeInProgress.IsFighterInSelections(square, 2);
+
                   Widget squareChild = GestureDetector(
                     onLongPress: () {HandleLongPress(i, j);},
-                    onTap: () { HandleTap(i, j, fighterSelected, pNum); },
+                    onTap: () {
+                        HandleTap(i, j, fighterSelected, pNum, model.challengeState);
+
+                      },
                     child:
                     SizedBox(
                       width: boxDim,
                       height: boxDim,
                       // child: (model.schemeEditorState.schemeEditorGridSelection.compare(i, j) ?
                       // imgWidget.BORDER(model.schemeEditorState.swapMode ? Colors.purpleAccent : Colors.yellow, 3.0) : imgWidget).PADDING(EdgeInsets.all(2))
-                      child: imgWidget.PADDING(EdgeInsets.all(2)),
+                      child: Stack(
+                        children: [
+                          Column(
+                            children: [ imgWidget.PADDING(EdgeInsets.all(2)).EXPANDED() ],
+                          ),
+
+                          !p1Selected ? Empty() : Column(
+                            children: [ Align(alignment: Alignment.topLeft,
+                                child: Container(color: Colors.purple,
+                                    child: AutoSizeText(' 1 ', style: TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold), minFontSize: 16, maxFontSize: 50)))
+                                .PADDING(EdgeInsets.all(4)).EXPANDED() ],
+                          ),
+
+                          !p2Selected ? Empty() : Column(
+                            children: [ Align(alignment: Alignment.bottomRight,
+                                child: Container(color: Colors.yellow,
+                                    child: AutoSizeText(' 2 ', style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold), minFontSize: 16, maxFontSize: 50)))
+                                .PADDING(EdgeInsets.all(4)).EXPANDED() ],
+                          ),
+                        ],
+                      ),
                     ),
                   );
 
                   double feedbackSize = 50;
 
-                  return !isDraggable || square.fighter == null ? squareChild
-                      : Draggable<Square>(
-                    onDragStarted: (){
-                      widget.toggleInParent();
-                    },
-                    onDragCompleted: (){
-                      if(model.challengeState.challengeInProgress.IsMaxChosen(pNum)) return;
-                      data.appStateEventSink.add(FighterEntrySelectionEvent(null));
-                      widget.toggleInParent();
-                    },
-                    onDraggableCanceled: (vel, off){
-                      if(model.challengeState.challengeInProgress.IsMaxChosen(pNum)) return;
-                      widget.toggleInParent();
-                    },
-                    data: square,
-                    feedback: Transform.translate(
-                        offset:
-                        Offset.zero, //Offset(-feedbackSize/2,-feedbackSize/2),
-                        child: FittedBox(fit: BoxFit.fill, child: imgWidget.PADDING(EdgeInsets.all(2)).SIZED(width: feedbackSize, height: feedbackSize))),
-                    child: squareChild,
-                  );
+                  return squareChild;
                 }
             )
         );
@@ -873,25 +868,20 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
 
 
     return
-      FutureBuilder<Image>(
-        builder: (context,snapshot) {
+      GestureDetector(
+        onScaleStart: (details){
 
-          return GestureDetector(
-            onScaleStart: (details){
-
-            },
-            onScaleUpdate: (details){
-              if(isDraggable) return;
-              localScale = details.scale;
-              ChangeDim(localScale * boxDimTemp, false);
-            },
-            onScaleEnd: (details) {
-              if(isDraggable) return;
-              ChangeDim(localScale * boxDimTemp, true);
-              localScale = 1;
-            },
-            child: Stack(
-              children:[
+        },
+        onScaleUpdate: (details){
+          localScale = details.scale;
+          ChangeDim(localScale * boxDimTemp, false);
+        },
+        onScaleEnd: (details) {
+          ChangeDim(localScale * boxDimTemp, true);
+          localScale = 1;
+        },
+        child: Stack(
+            children:[
               Scrollbar(
                 controller: widget.scrollControllerV,
                 child: ListView(
@@ -924,24 +914,14 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
                   ],
                 ),
               ),
+            ]
+        ) ,
 
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: FlatButton(
-                    color: Colors.white,
-                    onPressed: () { setState(() {
-                    isDraggable = !isDraggable;
-                  }); },
-                    child: Text(isDraggable ? 'DRAG' : 'SCROLL/ZOOM'),),
-                )
-              ]
-            ) ,
-
-                );
-        },
       );
   }
 }
+
+
 
 
 

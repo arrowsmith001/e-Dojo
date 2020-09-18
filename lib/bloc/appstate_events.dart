@@ -143,7 +143,11 @@ class FighterSelectedEvent extends AppStateEvent {
   final int playerNum;
   final int fighterNum;
 }
-
+class FighterUnselectedEvent extends AppStateEvent {
+  FighterUnselectedEvent(this.fighter, this.playerNum);
+  FighterScheme fighter;
+  final int playerNum;
+}
 class FighterEntrySelectionEvent extends AppStateEvent {
   FighterEntrySelectionEvent(this.fighterNum);
   int fighterNum;
