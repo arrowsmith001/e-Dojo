@@ -175,8 +175,8 @@ class MyAppbar extends StatefulWidget implements PreferredSizeWidget {
     this.shape,
     this.backgroundColor,
     this.brightness,
-    this.iconTheme,
-    this.actionsIconTheme,
+    //this.iconTheme,
+    //this.actionsIconTheme,
     this.textTheme,
     this.primary = true,
     this.centerTitle,
@@ -345,7 +345,7 @@ class MyAppbar extends StatefulWidget implements PreferredSizeWidget {
   ///
   /// If this property is null, then [ThemeData.appBarTheme.iconTheme] is used,
   /// if that is also null, then [ThemeData.primaryIconTheme] is used.
-  final IconThemeData iconTheme;
+  IconThemeData iconTheme = IconThemeData(color: Colors.white);
 
   /// The color, opacity, and size to use for the icons that appear in the app
   /// bar's [actions]. This should only be used when the [actions] should be
@@ -354,7 +354,7 @@ class MyAppbar extends StatefulWidget implements PreferredSizeWidget {
   ///
   /// If this property is null, then [ThemeData.appBarTheme.actionsIconTheme] is
   /// used, if that is also null, then this falls back to [iconTheme].
-  final IconThemeData actionsIconTheme;
+  IconThemeData actionsIconTheme = IconThemeData(color: Colors.white);
 
   /// The typographic styles to use for text in the app bar. Typically this is
   /// set along with [brightness] [backgroundColor], [iconTheme].
@@ -834,8 +834,8 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
         elevation: forceElevated || overlapsContent || (pinned && shrinkOffset > maxExtent - minExtent) ? elevation ?? 4.0 : 0.0,
         backgroundColor: backgroundColor,
         brightness: brightness,
-        iconTheme: iconTheme,
-        actionsIconTheme: actionsIconTheme,
+        //iconTheme: iconTheme,
+        //actionsIconTheme: actionsIconTheme,
         textTheme: textTheme,
         primary: primary,
         centerTitle: centerTitle,

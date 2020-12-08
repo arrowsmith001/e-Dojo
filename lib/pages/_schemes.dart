@@ -79,9 +79,11 @@ class _SchemesPageState extends State<SchemesPage> with SingleTickerProviderStat
               MyAppbar(
                 title: Text('Schemes', style: TextStyle(color: Colors.white),),
                 bottom: TabBar(
+                  labelStyle: TextStyle(color: Colors.white),
+                  labelColor: Colors.white,
                   controller: _tabController,
                   tabs: <Widget>[
-                  Tab(text: 'My Schemes',),
+                  Tab(text: 'My Schemes'),
                   Tab(text: 'Editor')
                 ],),
                 actions: <Widget>[
@@ -174,8 +176,9 @@ class _SchemesPageState extends State<SchemesPage> with SingleTickerProviderStat
             floatingActionButton: FloatingActionButton(
               child: Icon(Icons.add),
               onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute<NewGameInfo>(builder: (context) => NewGameDialog()))
-                .then((value) => value == null ? null : NavigateToNewSchemeEdit(value)); },
+              showDialog(context: context, builder: (context){
+                return NewGameDialog();
+              }).then((value) => value == null ? null : NavigateToNewSchemeEdit(value)); },
 
             ),
             )
@@ -628,7 +631,7 @@ class _NewGameDialogState extends State<NewGameDialog> {
                       width: 75, height: 75, color: Colors.grey
                     )
                   ),
-                ),
+                ).FLEXIBLE(),
 
                 FormBuilderTextField(
                     attribute: 'Name',
@@ -795,7 +798,7 @@ class _NewPlayerDialogState extends State<NewPlayerDialog> {
               width: 75,
               height: 75
           ),
-        ).FLEXIBLE(),
+        ),
       ),
 
       // Name field

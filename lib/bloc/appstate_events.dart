@@ -174,6 +174,13 @@ class ChallengeStateChange extends AppStateEvent {
   ChallengeStateChange(this.snap);
 }
 
+class ToggleReadyEvent extends AppStateEvent {
+  ToggleReadyEvent(this.pNum,this.to);
+  int pNum;
+  bool to;
+
+}
+
 // Dev events
 class ClearCacheEvent extends AppStateEvent {
 

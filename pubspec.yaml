@@ -65,6 +65,11 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  fonts:
+    - family:  EdojoIcons
+      fonts:
+      - asset: assets/fonts/EdojoIcons.ttf
+
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/game_default.png

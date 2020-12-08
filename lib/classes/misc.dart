@@ -410,8 +410,8 @@ class SelectGrid { // DOES NOT NEED TO SERIALIZE
     while(dim.maxRow < row) {addRow();}
     while(dim.maxCol < col) {addColumn();}
 
-    print('dim ${dim.maxRow} ${dim.maxCol}');
-    print('${f.fighterName} AddingAt: ${row} ${col}');
+    //print('dim ${dim.maxRow} ${dim.maxCol}');
+    //print('${f.fighterName} AddingAt: ${row} ${col}');
 
     selectGrid[row][col].fighter = f;
     f.SetFighterXY(row, col);
@@ -574,7 +574,7 @@ class FighterScheme {
 
   Image GetFighterImage()
   {
-    return iconImg != null ? iconImg : Image.asset(Assets.BROKEN_LINK);
+    return iconImg != null ? iconImg : iconImgFile != null ? Image.file(iconImgFile) : Image.asset(Assets.BROKEN_LINK);
   }
 
   bool HasVariants() { return variants!=null && variants.length > 0; }
@@ -701,6 +701,9 @@ class Challenge{
 @JsonSerializable()
 class ChallengeStatus {
 
+  bool p1Ready = false;
+  bool p2Ready = false;
+
   factory ChallengeStatus.fromJson(Map<String, dynamic> json) => _$ChallengeStatusFromJson(json);
   Map<String, dynamic> toJson() => _$ChallengeStatusToJson(this);
 
@@ -799,6 +802,37 @@ class ChallengeStatus {
         else return player2Variants['i' + fighterNum.toString()];
         break;
     }
+  }
+
+  void SetReady(int pNum, bool to) {
+    switch(pNum){
+      case 1: p1Ready = to;
+        break;
+      case 2: p2Ready = to;
+        break;
+    }
+  }
+
+  static bool DidIReadyUp(int pNum, ChallengeStatus state, ChallengeStatus newState) {
+
+    print('READY COMPARE 1 : ' + state.toJson().toString());
+    print('READY COMPARE 2 : ' + newState.toJson().toString());
+
+    switch(pNum){
+      case 1:
+        bool p1Before = state.p1Ready;
+        bool p1After = newState.p1Ready;
+
+        return !p1Before && p1After;
+        break;
+      case 2:
+
+        bool p2Before = state.p2Ready;
+        bool p2After = newState.p2Ready;
+        return !p2Before && p2After;
+    }
+
+    return false;
   }
 
 }

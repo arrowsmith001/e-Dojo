@@ -7,6 +7,7 @@ import 'package:edojo/tools/network.dart';
 class AppStateState{
   DataModel model;
   AppStateState(this.model);
+
 }
 
 class SearchingForUserState extends AppStateState {
@@ -28,4 +29,8 @@ class RefreshChallengeList extends AppStateState {
   Challenge newChallenge;
   Ops op;
   RefreshChallengeList(DataModel model, this.newChallenge, this.op) : super(model);
+}
+
+class ChallengeStartedState extends AppStateState {
+  ChallengeStartedState(DataModel model) : super(model);
 }

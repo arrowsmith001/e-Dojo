@@ -263,6 +263,8 @@ Map<String, dynamic> _$ChallengeToJson(Challenge instance) {
 
 ChallengeStatus _$ChallengeStatusFromJson(Map json) {
   return ChallengeStatus()
+    ..p1Ready = json['p1Ready'] as bool
+    ..p2Ready = json['p2Ready'] as bool
     ..p1In = json['p1In'] as bool
     ..p2In = json['p2In'] as bool
     ..player1Fighters = (json['player1Fighters'] as Map)?.map(
@@ -300,6 +302,8 @@ Map<String, dynamic> _$ChallengeStatusToJson(ChallengeStatus instance) {
     }
   }
 
+  writeNotNull('p1Ready', instance.p1Ready);
+  writeNotNull('p2Ready', instance.p2Ready);
   writeNotNull('p1In', instance.p1In);
   writeNotNull('p2In', instance.p2In);
   writeNotNull('player1Fighters',

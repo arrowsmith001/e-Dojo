@@ -416,3 +416,9 @@ class GridSelection{
   int y = 0;
 
 }
+
+// FIGHT DATA
+
+enum FightResult {
+  Win, Loss, Draw
+}

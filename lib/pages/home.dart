@@ -1,7 +1,9 @@
 
 import 'dart:convert';
 
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:edojo/bloc/appstate_events.dart';
+import 'package:edojo/presentation/edojo_icons_icons.dart';
 import 'package:edojo/widgets/my_app_bar.dart';
 
 import 'package:edojo/bloc/bloc.dart';
@@ -58,10 +60,19 @@ class HomeDefault extends StatefulWidget {
   _HomeDefaultState createState() => _HomeDefaultState();
 }
 
-class _HomeDefaultState extends State<HomeDefault> {
+class _HomeDefaultState extends State<HomeDefault> with SingleTickerProviderStateMixin{
 
   final DataBloc data = BlocProvider.instance.dataBloc;
   final NetworkServices net = NetworkServiceProvider.instance.netService;
+
+  TabController _tabController;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    this._tabController = new TabController(length: 4, vsync: this);
+  }
 
   void OnSignOutSelect() {
     net.SignOut();
@@ -106,26 +117,61 @@ class _HomeDefaultState extends State<HomeDefault> {
               ),
               body: SafeArea(
                 child: Column(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Center(
-                      child: GridView.count(
-                        shrinkWrap: true,
-                          crossAxisCount: 2,
-                          children: <Widget>[
+                  children: [
+                    TabBarView(
+                      physics: NeverScrollableScrollPhysics(),
+                      controller: _tabController,
+                      children: [
+                        ChallengesPage(),
+                        SchemesPage(),
+                        Empty(),
+                        Empty()
+                      ],
 
-                            BigMainButton(context, image: Image.asset(Assets.FISTS), widget: ChallengesPage(), color: Colors.yellow, title: 'Challenges').PADDING(EdgeInsets.all(20.0)),
-                            BigMainButton(context,image: Image.asset(Assets.FIGHTER), widget: Empty(), color: Colors.blue, title: 'View Fighter Profile').PADDING(EdgeInsets.all(20.0)),
-                            BigMainButton(context, image: Image.asset(Assets.GAME),widget: SchemesPage(), color: Colors.purpleAccent, title: 'Manage Schemes').PADDING(EdgeInsets.all(20.0)),
-                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.orange, title: 'Explore Data').PADDING(EdgeInsets.all(20.0)),
-                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'General settings').PADDING(EdgeInsets.all(20.0)),
-                            BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'Account settings').PADDING(EdgeInsets.all(20.0)),
+                    ).EXPANDED(),
+                    Container(
+                      height: 50,
+                      child: TabBar(
+                        controller: _tabController,
+                        tabs: [
+                          Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(EdojoIcons.home_fists), AutoSizeText('Challenges', minFontSize: 10,).FLEXIBLE()]),
+                          Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(EdojoIcons.game_default), AutoSizeText('Games', minFontSize: 10,).FLEXIBLE()]),
+                          Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(EdojoIcons.fighter_default), AutoSizeText('Profile', minFontSize: 10,).FLEXIBLE()]),
+                          Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(EdojoIcons.home_data), AutoSizeText('Data', minFontSize: 10,).FLEXIBLE()]),
+                        ],
 
-                          ]),
-                    ).EXPANDED()
+                      ),
+                    )
+
                   ],
-                ).MY_BACKGROUND_CONTAINER(),
+                )
+
+
+
+
+                // // OLD
+                // Column(
+                //   mainAxisSize: MainAxisSize.max,
+                //   mainAxisAlignment: MainAxisAlignment.center,
+                //   children: <Widget>[
+                //     Center(
+                //       child: GridView.count(
+                //         shrinkWrap: true,
+                //           crossAxisCount: 2,
+                //           children: <Widget>[
+                //             BigMainButton(context, image: Image.asset(Assets.FISTS), widget: ChallengesPage(), color: Colors.yellow, title: 'Challenges').PADDING(EdgeInsets.all(20.0)),
+                //             BigMainButton(context,image: Image.asset(Assets.FIGHTER), widget: Empty(), color: Colors.blue, title: 'View Fighter Profile').PADDING(EdgeInsets.all(20.0)),
+                //             BigMainButton(context, image: Image.asset(Assets.GAME),widget: SchemesPage(), color: Colors.purpleAccent, title: 'Manage Schemes').PADDING(EdgeInsets.all(20.0)),
+                //             BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.orange, title: 'Explore Data').PADDING(EdgeInsets.all(20.0)),
+                //             BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'General settings').PADDING(EdgeInsets.all(20.0)),
+                //             BigMainButton(context,image: Image.asset(Assets.DATA), widget: Empty(), color: Colors.grey, title: 'Account settings').PADDING(EdgeInsets.all(20.0)),
+                //
+                //           ]),
+                //     ).EXPANDED()
+                //   ],
+                // ).MY_BACKGROUND_CONTAINER(),
+
+
               ),
             );
         });

@@ -298,7 +298,7 @@ class DataBloc extends Bloc {
         model.challengeState.SetScheme(event.scheme);
 
         print('CHALLENGE STARTED: C received ' + event.ch.toJson().toString());
-        _appStateSink.add(AppStateState(model));
+        _appStateSink.add(ChallengeStartedState(model));
 
       }
 
@@ -336,15 +336,27 @@ class DataBloc extends Bloc {
 
         if(model.challengeState.challengeInProgress.state == null)
           model.challengeState.challengeInProgress.state = new ChallengeStatus();
-
         ChallengeStatus currentState = model.challengeState.challengeInProgress.state;
+
         currentState.UnselectFighter(event.fighter, event.playerNum);
 
         String cid = model.challengeState.challengeInProgress.meta.challengeId;
-        // Notify the rtd
         await NetworkServiceProvider.instance.netService.PushNewChallengeState(cid, currentState);
-
         _appStateSink.add(AppStateState(model));
+      }
+
+      if(event is ToggleReadyEvent){
+
+        if(model.challengeState.challengeInProgress.state == null)
+          model.challengeState.challengeInProgress.state = new ChallengeStatus();
+        ChallengeStatus currentState = model.challengeState.challengeInProgress.state;
+
+        currentState.SetReady(event.pNum, event.to);
+
+        String cid = model.challengeState.challengeInProgress.meta.challengeId;
+        await NetworkServiceProvider.instance.netService.PushNewChallengeState(cid, currentState);
+        _appStateSink.add(AppStateState(model));
+
       }
 
       if(event is ChallengeRequestChange)
@@ -410,7 +422,12 @@ class DataBloc extends Bloc {
       if(event is ChallengeStateChange)
         {
           ChallengeStatus newState = ChallengeStatus.fromJson(Map<String,dynamic>.from(event.snap.value));
+
+          // int pNum = model.challengeState.challengeInProgress.meta.player1.userName == model.user.meta.userName ? 1
+          //     : model.challengeState.challengeInProgress.meta.player2.userName == model.user.meta.userName ? 2
+          //     : 0;
           await model.challengeState.RefreshChallengeState(newState);
+
           _appStateSink.add(AppStateState(model));
         }
 
@@ -465,6 +482,10 @@ class DataBloc extends Bloc {
   }
 
 }
+
+
+
+
 
 
 

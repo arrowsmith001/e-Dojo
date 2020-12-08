@@ -159,59 +159,51 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
 
 
           return Scaffold(
-            appBar:
-            MyAppbar(
-              title: Text('Challenges', style: TextStyle(color: Colors.white),),
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(40.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text("PLAYING: ", textAlign: TextAlign.left,),
-                      Container(
-                          child: DropdownButton<SchemeMetadata>(
-                            value: schemeEquipped,
-                              onChanged: (smd) {
-                              print('Changed to '+smd.gameName);
-                                data.appStateEventSink.add(ChangeSchemeEquipped(smd));
-                              },
-                              items: schemesOwnedList.map((SchemeMetadata smd)
-                              {
-                                return DropdownMenuItem<SchemeMetadata>(
-                                  value: smd,
-                                    child: Container(
-                                        child: Text(smd.gameName),
-                                        decoration: BoxDecoration(
-                                            border: Border.all(width: 2, color: Colors.blue),
-                                            borderRadius: BorderRadius.all(Radius.circular(15)),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.blue.withAlpha(70),
-                                                blurRadius: 50.0,
-                                                spreadRadius: 10.0,
-                                                offset: Offset(0.0, 0.0,
-                                                ),
-                                              ),
-                                            ]
-                                        )));
-                              }).toList()
-
-                          )
-                      )
-                    ],
-                  ).PADDING(EdgeInsets.symmetric(horizontal: 16.0)).EXPANDED()],
-                ),
-              ),
-            ),
             body: SafeArea(
             //  child: Center(
 
                 child: Column(
                   mainAxisSize: MainAxisSize.max,
                   children: [
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text("PLAYING: ", textAlign: TextAlign.left,),
+                        Container(
+                            child: DropdownButton<SchemeMetadata>(
+                                value: schemeEquipped,
+                                onChanged: (smd) {
+                                  print('Changed to '+smd.gameName);
+                                  data.appStateEventSink.add(ChangeSchemeEquipped(smd));
+                                },
+                                items: schemesOwnedList.map((SchemeMetadata smd)
+                                {
+                                  return DropdownMenuItem<SchemeMetadata>(
+                                      value: smd,
+                                      child: Container(
+                                          child: Text(smd.gameName),
+                                          decoration: BoxDecoration(
+                                           // image: DecorationImage(image: smd.GetGameImage().image),
+                                           // color: Colors.indigo,
+                                             // border: Border.all(width: 2, color: Colors.blue),
+                                            //  borderRadius: BorderRadius.all(Radius.circular(5)),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.indigo,
+                                                  blurRadius: 15.0,
+                                                  spreadRadius: 10.0,
+                                                  offset: Offset(0.0, 0.0,
+                                                  ),
+                                                ),
+                                              ]
+                                          )));
+                                }).toList()
+
+                            )
+                        )
+                      ],
+                    ).PADDING(EdgeInsets.symmetric(horizontal: 16.0)).FLEX(0),
 
                     // CHALLENGES/FRIENDS TABVIEW
                     TabBar(
@@ -305,7 +297,8 @@ class _ChallengesPageState extends State<ChallengesPage> with SingleTickerProvid
                                       title: Text(!userIsDisplay ? userData.displayName : userData.userName),
                                       subtitle: Text(!userIsDisplay ? userData.userName : ''),
                                       leading: Image(image: Image.asset(Assets.DEFAULT_USER).image),
-                                      trailing: FlatButton(onPressed: () { challengeUser(userData, user, schemeEquipped); }, child: Image.asset(Assets.FISTS))
+                                      trailing: FlatButton(onPressed: () { challengeUser(userData, user, schemeEquipped); },
+                                          child: Container(child: Image.asset(Assets.FISTS),))
                                     );
                                   }).FLEXIBLE(),
 
@@ -438,14 +431,20 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
   final DataBloc data = BlocProvider.instance.dataBloc;
   final NetworkServices net = NetworkServiceProvider.instance.netService;
 
-  AnimationController _animController;
+  AnimationController _readyUpAnimController;
+  Animation<double> overshoot;
+
+  AnimationController _allReadyAnimController;
 
   int selectedFighter;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(vsync: this, duration: Duration(milliseconds: 300));
+    _readyUpAnimController = AnimationController(vsync: this, duration: Duration(milliseconds: 500));
+    overshoot = new Tween<double>(begin: 1.0, end: 0.0).animate(new CurvedAnimation(parent: _readyUpAnimController, curve: Curves.elasticOut));
+
+    _allReadyAnimController = AnimationController(vsync: this, duration: Duration(milliseconds: 300));
 
     // Listen for challenges, fetch scheme itself
     net.SetChallengeListener(widget.ch.meta.challengeId, true);
@@ -470,50 +469,60 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
     // Briefly exited from challenge (not closed)
     data.appStateEventSink.add(ChallengeExitedEvent(widget.ch));
 
-    _animController.dispose();
+    _readyUpAnimController.dispose();
+    _allReadyAnimController.dispose();
   }
 
-  void togglePlayerSelect() {
+  void toggleAnimDirection() {
 
-  setState(() {
-    //showingFighterSelect = !showingFighterSelect;
-
-    if(!animForward) { _animController.reverse();  }
-    else {  _animController.forward(); }
-
-    animForward = !animForward;
-  });
   }
 
   // Fighter table controls
   FighterSelectTableFromScheme fighterTable;
-  bool animForward = true;
+
+  bool savedPersonalReadyStatus = false;
+  bool savedAllReadyStatus = false;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AppStateState>(
         stream: data.appStateStream,
         initialData: AppStateState(data.model),
-    builder: (context, snapshot) {
+    builder: (context, ds) {
 
-      DataModel dm = snapshot.data.model;
-      GameScheme scheme = dm.challengeState.GetScheme();
+      DataModel dm = ds.data.model;
+      //GameScheme scheme = dm.challengeState.GetScheme();
+      GameScheme scheme = widget.ch.scheme;
 
-      // TODO Introduce and make changeable these two variables
-      // Have readystate determine challenge page state
-     bool isP1Ready = widget.ch.state.p1Ready;
-     bool isP2Ready = widget.ch.state.p2Ready;
+      bool isP1 = widget.ch.meta.player1.userName == dm.user.meta.userName;
+      bool isP2 = widget.ch.meta.player2.userName == dm.user.meta.userName;
+      bool isP1Ready = widget.ch.state.p1Ready;
+      bool isP2Ready = widget.ch.state.p2Ready;
+      bool amIReady = isP1 && isP1Ready || isP2 && isP2Ready;
+      bool areAllReady = isP1Ready && isP2Ready;
 
-      Image schemeImg = widget.ch.meta.schemeImg;
-      int maxFighters = widget.ch.meta.maxFighters;
+     Image schemeImg = widget.ch.meta.schemeImg;
+     int maxFighters = widget.ch.meta.maxFighters;
 
       if(scheme == null || scheme.grid == null) return CircularProgressIndicator();
 
       fighterTable =
-          FighterSelectTableFromScheme(togglePlayerSelect, scheme, (MediaQuery.of(context).size.width - 10) / (scheme.grid.dim.maxCol + 1));
+          FighterSelectTableFromScheme(toggleAnimDirection, scheme, (MediaQuery.of(context).size.width - 10) / (scheme.grid.dim.maxCol + 1));
 
-      bool isP1 = widget.ch.meta.player1.userName == dm.user.meta.userName;
-      bool isP2 = widget.ch.meta.player2.userName == dm.user.meta.userName;
+      bool didIJustReadyUp = !savedPersonalReadyStatus && amIReady;
+      savedPersonalReadyStatus = amIReady;
+
+      if(didIJustReadyUp){
+        _readyUpAnimController.reset();
+        _readyUpAnimController.forward();
+      }
+
+      bool didAllJustReadyUp = !savedAllReadyStatus && areAllReady;
+      savedAllReadyStatus = areAllReady;
+      if(didAllJustReadyUp){
+        _allReadyAnimController.reset();
+        _allReadyAnimController.forward();
+      }
 
       List<Widget> p1ColChildren = new List<Widget>();
       p1ColChildren.add(Text(widget.ch.meta.player1.userName, textAlign: TextAlign.end,).FLEX(0));
@@ -527,16 +536,14 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
         p2ColChildren.add(FighterEntry(this, 2, i, isP2).EXPANDED());
       }
 
-      return SafeArea(
+      // Page 1 - char selection
+      if(!areAllReady) return SafeArea(
         child: Scaffold(
          appBar: MyAppbar(
            title: Center(child:
-           Row(
-             mainAxisAlignment: MainAxisAlignment.spaceAround,
-               children: [
-             widget.ch.meta.player1.GetImage().SIZED(height: 50, width: 50).FLEXIBLE(),
-             scheme.meta.iconImg.FLEXIBLE(),
-             widget.ch.meta.player2.GetImage().SIZED(height: 50, width: 50).FLEXIBLE() ])),
+            FittedBox(
+              child: scheme.meta.iconImg, fit: BoxFit.fitHeight,)
+           ).SIZED(height: 50),
            actions: [
             IconButton(icon: Icon(Icons.more_vert, color: Colors.white), onPressed: () {  },).PADDING(EdgeInsets.fromLTRB(5, 0,0,0))
            ],
@@ -563,45 +570,134 @@ class _ChallengePageState extends State<ChallengePage> with TickerProviderStateM
                )
              ).FLEX(1),
 
-             Container(
-               child: Align(
-                 child: fighterTable, alignment: Alignment.center,).PADDING(EdgeInsets.all(5)),
-               decoration: BoxDecoration(
-                 // borderRadius: BorderRadius.circular(20),
-                 // color: Colors.indigo,
-                   border: Border(
-                     top: BorderSide(
-                       color: Colors.white,
-                       width: 2,
-                       style: BorderStyle.solid,
-                     ),
-                   )
-               ),).FLEX(2),
+             Stack(
+               children: [
+
+                 Container(
+                 child: Align(
+                       child: fighterTable,
+                    alignment: Alignment.center,).PADDING(EdgeInsets.all(5)),
+                 decoration: BoxDecoration(
+                   // borderRadius: BorderRadius.circular(20),
+                   // color: Colors.indigo,
+                   //   border: Border(
+                   //     top: BorderSide(
+                   //       color: Colors.white,
+                   //       width: 2,
+                   //       style: BorderStyle.solid,
+                   //     ),
+                   //   )
+                 ),),
+
+
+                 !amIReady ? Empty() : Positioned.fill(child:
+                  Container(color: Colors.grey.withAlpha(150),
+                    child: Align(alignment: Alignment.center,child:
+
+                    AnimatedBuilder(
+                        animation: _readyUpAnimController,
+                        builder: (BuildContext context, Widget child) {
+                          
+                          return Transform.translate(
+                              offset: Offset.fromDirection(0, overshoot.value*250),
+                              child: Text('READY', style: TextStyle(color: Colors.white, fontSize: 50, fontWeight: FontWeight.bold)),);
+                          
+                        },
+                        )),))
+               ],
+             ).FLEX(2),
 
              Row(
                children: [
-                 Text('P1').EXPANDED(),
-                 Text('P2').EXPANDED(),
-                 RaisedButton(
-                   onPressed: () {  },
-                   child: Text('READY'),
-                 ).EXPANDED()
+
+                 Row(children: [
+                   widget.ch.meta.player1.GetImage().SIZED(height: 50, width: 50).FLEXIBLE(),
+                   FittedBox(child:
+                   AutoSizeText.rich(
+                     TextSpan(text: isP1Ready ? widget.ch.meta.player1Username + '\nREADY' : 'Waiting for\n' + widget.ch.meta.player1Username), minFontSize: 10, maxLines: 3,), fit: BoxFit.fitWidth,)
+                       .PADDING(EdgeInsets.all(10))
+                       .EXPANDED()
+                 ]
+                 ).PADDING(EdgeInsets.all(5)).FLEXIBLE(),
+
+                 Row(children: [
+                   widget.ch.meta.player2.GetImage().SIZED(height: 50, width: 50).FLEXIBLE(),
+                 FittedBox(child:
+                 AutoSizeText.rich(
+                   TextSpan(text: isP2Ready ? widget.ch.meta.player2Username + '\nREADY' : 'Waiting for\n' + widget.ch.meta.player2Username), minFontSize: 10,), fit: BoxFit.fitWidth,)
+                     .PADDING(EdgeInsets.all(10))
+                     .EXPANDED()
+                 ]
+               ).PADDING(EdgeInsets.all(5)).FLEXIBLE(),
+
+               CircleAvatar(radius: 30, backgroundColor: Colors.green, child: IconButton(icon: Icon(Icons.check), color: Colors.white, onPressed: () { toggleReady(isP1 ? 1 : 2, !amIReady); },)).PADDING(EdgeInsets.all(5))
                ]
-             )
+        )
 
            ],
          ).MY_BACKGROUND_CONTAINER(),
 
       )
       );
+
+      // Page 2: Enter fight data
+      return AnimatedBuilder(
+        animation: _allReadyAnimController,
+        builder: (BuildContext context, Widget child) {
+
+          return Transform.translate(
+            offset: Offset.fromDirection(0, (1-_allReadyAnimController.value)*MediaQuery.of(context).size.width),
+            child: SafeArea(
+              child: Scaffold(
+                appBar: MyAppbar(
+                    title: Text('Fight Data', style: TextStyle(color: Colors.white)),
+                  leading: IconButton(icon: Icon(Icons.arrow_back), onPressed: () { toggleReady(isP1 ? 1 : 2, false); },)
+                ),
+                body: Column(
+                  children: [
+                    Center(child: Text('No fight records between you and your opponent were found').PADDING(EdgeInsets.all(20))).EXPANDED(),
+                    Container(height: 100, child:
+                    Row(children: [
+                      Column(
+                        children: [
+                          FlatButton(onPressed: (){
+                            LogFightData(FightResult.Loss);
+                          }, child: Text('LOSS')).EXPANDED(),
+                        ],
+                      ).EXPANDED(),
+                      Column(
+                        children: [
+                          FlatButton(onPressed: (){
+                            LogFightData(FightResult.Win);
+                          }, child: Text('WIN')).EXPANDED(),
+                        ],
+                      ).EXPANDED()])
+                        )
+                  ],
+                ).MY_BACKGROUND_CONTAINER(),
+              ),
+            ));
+
+        },
+      );
     }
     );
   }
 
+  void toggleReady(int pNum, bool to) {
+    data.appStateEventSink.add(ToggleReadyEvent(pNum, to));
+  }
 
+  void LogFightData(FightResult result) {
 
+    // TODO
 
+  }
 }
+
+
+
+
 
 
 
@@ -678,7 +774,7 @@ class _FighterEntryState extends State<FighterEntry> {
                     child: InkWell(
                       onTap: (){
                         if(!widget.isUser) return;
-                        widget.parentState.togglePlayerSelect();
+                        widget.parentState.toggleAnimDirection();
                         data.appStateEventSink.add(FighterEntrySelectionEvent(widget.fighterNum));
                       }, // TODO Touching selects field for entry (if on player side)
                       child: DottedBorder(
@@ -717,6 +813,7 @@ class FighterSelectTableFromScheme extends StatefulWidget {
 
   @override
   _FighterSelectTableFromScheme createState() => _FighterSelectTableFromScheme(initDim);
+
 }
 
 class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> {
@@ -728,11 +825,27 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
   double boxDim;
   double localScale = 1;
   double boxDimTemp;
+  double initDim;
 
-  _FighterSelectTableFromScheme(double initDim){
-    this.boxDim = initDim;
-    this.boxDimTemp = initDim;
+  void initState(){
+    super.initState();
+    //ResetDim();
   }
+
+  _FighterSelectTableFromScheme(this.initDim){
+      this.boxDim = initDim;
+      this.boxDimTemp = initDim;
+  }
+
+  void ResetDim(){
+    initDim = (MediaQuery.of(context).size.width - 10) / (widget.scheme.grid.dim.maxCol + 1);
+    print('initDim: ' + initDim.toString());
+    setState(() {
+      this.boxDim = initDim;
+      this.boxDimTemp = initDim;
+    });
+  }
+
 
   void ChangeDim(double newDim, bool set)
   {
@@ -795,9 +908,7 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
 
   void HandleLongPress(int i, int j) {
     print('longpress');
-    setState(() {
-
-    });
+    ResetDim();
   }
 
   @override
@@ -834,15 +945,17 @@ class _FighterSelectTableFromScheme extends State<FighterSelectTableFromScheme> 
             StreamBuilder<AppStateState>(
                 initialData: AppStateState(data.model),
                 stream: data.appStateStream,
-                builder: (context, snapshot) {
+                builder: (context, ds) {
 
-                  DataModel model = snapshot.data.model;
+                  DataModel model = ds.data.model;
                   int fighterSelected = model.challengeState.entrySelection;
                   int pNum = model.challengeState.challengeInProgress.meta.player1.userName == model.user.meta.userName ? 1 :
                     model.challengeState.challengeInProgress.meta.player2.userName == model.user.meta.userName ? 2 : 0;
 
                   bool p1Selected = model.challengeState.challengeInProgress.IsFighterInSelections(square, 1);
                   bool p2Selected = model.challengeState.challengeInProgress.IsFighterInSelections(square, 2);
+
+                  if(ds is ChallengeStartedState) ResetDim();
 
                   Widget squareChild = GestureDetector(
                     onLongPress: () {HandleLongPress(i, j);},
