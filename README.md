@@ -6,4 +6,4 @@ Currently uses Firebase for all its online functionality, though in theory any i
 
 Data model management is done through BLoC-inspired stream and sink system which interact with a centralised data center.
 
-Status: Work in progress
+Status: Work in progress 
